@@ -211,6 +211,45 @@ test("anthropic protocol receives its own ping event as the keep-alive frame", (
   assert.equal(waitingKeepAliveChunk(undefined), ": keep-alive\n\n");
 });
 
+test("a client abort during adoption cancels the pending upstream body read", async () => {
+  const controller = new AbortController();
+  const instance = startWaitingResponseStream({
+    intervalMs: 60_000,
+    keepAliveChunk: () => ": keep-alive\n\n",
+    signal: controller.signal
+  });
+  let upstreamCancelled = false;
+  const encoder = new TextEncoder();
+  let emittedFirstChunk = false;
+  const upstreamBody = new ReadableStream({
+    pull(c) {
+      // Emit exactly one chunk and then leave the read genuinely pending, so
+      // adoption is blocked mid-transfer when the abort arrives. (A pull that
+      // enqueued on every call would spin the pump through microtasks and
+      // starve the timer that fires the abort.)
+      if (emittedFirstChunk) {
+        return;
+      }
+      emittedFirstChunk = true;
+      c.enqueue(encoder.encode('event: message_start\ndata: {"type":"message_start"}\n\n'));
+    },
+    cancel() {
+      upstreamCancelled = true;
+    }
+  });
+  const upstream = new Response(upstreamBody, {
+    headers: { "content-type": "text/event-stream" },
+    status: 200
+  });
+
+  const adoption = instance.adopt(upstream);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  controller.abort(new Error("client disconnected"));
+  await adoption;
+
+  assert.equal(upstreamCancelled, true, "the upstream body read must be cancelled on client abort");
+});
+
 test("client disconnect during the cooldown gives up with no further upstream attempts", async () => {
   const stub = withStubbedFetch(() => new Response(null, { status: 429 }));
   const controller = new AbortController();

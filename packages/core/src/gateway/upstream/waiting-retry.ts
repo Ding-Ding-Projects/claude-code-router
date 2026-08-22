@@ -254,11 +254,25 @@ export function startWaitingResponseStream(input: {
         closeController();
         return;
       }
+      if (disposed || boundSignal?.aborted) {
+        // The client went away before adoption started; stop the upstream
+        // transfer instead of pumping into a closed stream.
+        await cancelUpstreamBody(body);
+        return;
+      }
       const reader = body.getReader();
+      // A disconnected client must also stop the upstream read: cancelling the
+      // reader settles any pending read immediately instead of leaving it pending.
+      const cancelUpstreamOnAbort = (): void => {
+        void reader.cancel().catch(() => {
+          // The upstream body may already be closed; nothing left to cancel.
+        });
+      };
+      boundSignal?.addEventListener("abort", cancelUpstreamOnAbort, { once: true });
       try {
         for (;;) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done || disposed) break;
           enqueue(value);
         }
         closeController();
@@ -266,6 +280,8 @@ export function startWaitingResponseStream(input: {
         // Surface upstream mid-body failures to the client through the same
         // stream error path a direct pipe would have used.
         failController(error instanceof Error ? error : new Error(String(error)));
+      } finally {
+        boundSignal?.removeEventListener("abort", cancelUpstreamOnAbort);
       }
     },
     failWith(errorChunk: string): void {
@@ -275,6 +291,14 @@ export function startWaitingResponseStream(input: {
     },
     dispose
   };
+}
+
+async function cancelUpstreamBody(body: ReadableStream<Uint8Array>): Promise<void> {
+  try {
+    await body.cancel();
+  } catch {
+    // Best-effort upstream cleanup must not mask the client disconnect.
+  }
 }
 
 /** Terminal 503 returned to a non-streaming client once the wait budget ends. */
