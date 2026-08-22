@@ -3,7 +3,6 @@
  * settings, palette, tabs and appearance all share a single persistence and
  * i18n path. Guarded so importing this module in Node stays side-effect free.
  */
-import * as util from './util.js';
 import * as store from './store.js';
 import * as i18n from './i18n.js';
 import * as theme from './theme.js';
@@ -62,7 +61,7 @@ function boot() {
 
   /* Notify wiring into modules that need it. */
   tabsMod._wireNotify({ info: notifyMod.info, warn: notifyMod.warn });
-  appearanceMod._wireNotify(notifyMod.info);
+  appearanceMod._wireNotify({ info: notifyMod.info, warn: notifyMod.warn });
 
   theme.init();
   colorMod.publishRainbowGlobals();

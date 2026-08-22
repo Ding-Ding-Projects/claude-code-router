@@ -133,6 +133,11 @@ function nearestTarget(node) {
 
 function wireContextMenuEditing() {
   document.addEventListener('contextmenu', (e) => {
+    // A component that already claimed this event keeps it — the appearance
+    // entry point must never REPLACE another surface's own context menu.
+    if (e.defaultPrevented) return;
+    // Native controls keep their platform menu (text selection, spellcheck).
+    if (e.target.closest?.('input, textarea, select')) return;
     const target = nearestTarget(e.target);
     if (!target) return;
     e.preventDefault();
@@ -152,6 +157,7 @@ function wireContextMenuEditing() {
   });
   document.addEventListener('keydown', (e) => {
     if ((e.shiftKey && e.key === 'F10') || e.key === 'ContextMenu') {
+      if (e.defaultPrevented) return; // a focused tab/dialog already opened ITS menu
       const target = nearestTarget(document.activeElement);
       if (target) {
         e.preventDefault();
@@ -282,7 +288,54 @@ export function openEditor(target) {
   show(i18n.t('appear.tab.colour'));
 
   /* ---- Footer actions ---- */
-  const foot = el('div', { class: 'dialog-actions', style: 'padding:8px 12px;border-top:1px solid var(--md-sys-color-outline-variant)' });
+  const foot = el('div', { class: 'dialog-actions', style: 'padding:8px 12px;border-top:1px solid var(--md-sys-color-outline-variant);flex-wrap:wrap' });
+
+  // Presets — derived strictly from the shipped-default baseline snapshot.
+  for (const preset of presets()) {
+    const b = el('button', { class: 'chip', type: 'button', children: [preset.name] });
+    b.style.cursor = 'pointer';
+    b.addEventListener('click', () => {
+      preset.apply();
+      notifyInfoLocal(`${preset.name} applied.`);
+      closeEditor();
+      // reopen fresh so controls reflect the reset state
+      openEditor(target);
+    });
+    foot.append(b);
+  }
+
+  const exportBtn = el('button', { class: 'btn btn--text', type: 'button', children: [i18n.t('appear.export')] });
+  exportBtn.addEventListener('click', () => {
+    const blob = new Blob([exportOverrides()], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ccr-site-appearance.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  });
+
+  const importBtn = el('button', { class: 'btn btn--text', type: 'button', children: [i18n.t('appear.import')] });
+  importBtn.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    input.setAttribute('aria-label', i18n.t('appear.import'));
+    input.addEventListener('change', async () => {
+      const f = input.files?.[0];
+      if (!f) return;
+      try {
+        const n = importOverrides(await f.text());
+        notifyInfoLocal(i18n.t('appear.imported', { n }));
+      } catch (err) {
+        notifyWarnLocal(`Import failed: ${err.message}`);
+      }
+    });
+    input.click();
+  });
+
   const resetEl = el('button', { class: 'btn btn--text', type: 'button', children: [i18n.t('appear.resetElement')] });
   resetEl.addEventListener('click', () => {
     delete overrides[target.id];
@@ -290,7 +343,7 @@ export function openEditor(target) {
     closeEditor();
     notifyInfoLocal(i18n.t('appear.resetDone'));
   });
-  foot.append(resetEl);
+  foot.append(exportBtn, importBtn, resetEl);
   panel.append(foot);
 
   document.body.appendChild(panel);
@@ -395,8 +448,14 @@ export function presets() {
 }
 
 let notifyInfoLocal = () => {};
-export function _wireNotify(fn) {
-  notifyInfoLocal = fn;
+let notifyWarnLocal = () => {};
+export function _wireNotify(fns) {
+  if (typeof fns === 'function') {
+    notifyInfoLocal = fns;
+    return;
+  }
+  notifyInfoLocal = fns?.info ?? notifyInfoLocal;
+  notifyWarnLocal = fns?.warn ?? notifyWarnLocal;
 }
 
 void clear; void append;

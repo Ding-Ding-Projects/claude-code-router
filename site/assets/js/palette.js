@@ -233,7 +233,8 @@ function renderList() {
   filtered.forEach((it, i) => {
     const rowEl = el('button', { class: ['palette-row'], type: 'button', attrs: { role: 'option', 'aria-selected': String(i === activeIdx), 'data-id': it.id } });
     const bodyCol = el('div', { class: 'row-body' });
-    append(bodyCol, el('span', { class: 'row-title', children: [(it.kind === 'setting' ? '⚙ ' : it.kind === 'page' ? '📄 ' : '⌘ ') + it.title] }));
+    const rowEmoji = i18n.deco(it.kind === 'setting' ? '⚙️' : it.kind === 'page' ? '📄' : '⌘');
+    append(bodyCol, el('span', { class: 'row-title', children: [rowEmoji + it.title] }));
     if (it.sub) append(bodyCol, el('span', { class: 'row-sub', children: [it.sub] }));
     rowEl.append(bodyCol);
     const ctl = it.kind === 'setting' ? rowControlFor(items.find((x) => x.id === it.id)?.row || {}) : null;

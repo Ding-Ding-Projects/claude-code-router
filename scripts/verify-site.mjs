@@ -158,6 +158,40 @@ if (!presetsMatch) fail('rainbow', 'preset swatch list not found');
 else if (presetsMatch[1].includes('rainbow')) fail('rainbow', 'sentinel leaked into the swatch palette');
 else ok('rainbow sentinel is a marker only — never inside the swatch palette');
 
+/* 9. every static i18n.t('<key>') call resolves ------------------------------- */
+const jsKeyUses = new Set();
+for (const m of modules) {
+  const src = fs.readFileSync(path.join(jsDir, m), 'utf8');
+  for (const match of src.matchAll(/\bt\('([a-z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+)+)'/g)) {
+    jsKeyUses.add(match[1]);
+  }
+}
+const dynamicPrefixes = ['tabs.dock.', 'settings.section.'];
+const missingJsKeys = [...jsKeyUses].filter((k) => !(k in DICT) && !dynamicPrefixes.some((p) => k.startsWith(p)));
+if (missingJsKeys.length) fail('i18n-js-keys', `t() called with keys missing from dictionary: ${missingJsKeys.join(', ')}`);
+else ok(`all ${jsKeyUses.size} static t() keys resolve`);
+
+/* 10. getElementById targets exist statically or are documented dynamic shapes */
+const htmlIds = new Set();
+for (const file of ['index.html', 'settings.html']) {
+  const html = fs.readFileSync(path.join(siteSrc, file), 'utf8');
+  for (const m of html.matchAll(/id="([^"]+)"/g)) htmlIds.add(m[1]);
+}
+const dynamicIdPatterns = [/^tab-[a-z]+$/, /^pane-[a-z]+$/, /^desc-.+$/, /^flag-.+$/, /rainbow-opt-/, /^ccr-bi-style$/, /^tab-overflow-btn$/];
+let missingIds = [];
+for (const m of modules) {
+  const src = fs.readFileSync(path.join(jsDir, m), 'utf8');
+  for (const match of src.matchAll(/getElementById\('([^']+)'\)/g)) {
+    const id = match[1];
+    if (htmlIds.has(id)) continue;
+    if (dynamicIdPatterns.some((re) => re.test(id))) continue;
+    if (/\$\{/.test(match[0])) continue; // template-built
+    missingIds.push(`${m}:${id}`);
+  }
+}
+if (missingIds.length) fail('dom-ids', `getElementById targets not found in any HTML: ${missingIds.join(', ')}`);
+else ok('every static getElementById target exists in the shipped HTML');
+
 console.log('');
 if (problems.length) {
   console.error(`verify-site: ${problems.length} problem(s)`);
