@@ -5,6 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Claude Code Router</title>
   <meta name="description" content="Claude Code Router — route Claude Code to any LLM. Documentation, downloads and release notes for the static site.">
+  <!-- ccr-content-head:start — canonical source: site/partials/head.html (keep byte-identical; static build does not inline partials yet) -->
+  <meta property="og:title" content="Claude Code Router">
+  <meta property="og:description" content="Route Claude Code to any LLM — transform rules, routing profiles and provider management, documented and downloadable here.">
+  <meta property="og:url" content="https://ding-ding-projects.github.io/claude-code-router/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Claude Code Router">
+  <!-- TODO(documented asset): publish site/assets/social-preview.png (1280x640) before/at Pages deployment.
+       The URL below is the canonical published path for that file; until the PNG lands, crawlers get a
+       404 for the image only — every other tag is live. Never repoint og:image at a guessed third-party URL. -->
+  <meta property="og:image" content="https://ding-ding-projects.github.io/claude-code-router/assets/social-preview.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="640">
+  <meta property="og:image:alt" content="Claude Code Router — route Claude Code requests to any LLM. Project wordmark on the teal Material Design 3 seed colour.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Claude Code Router">
+  <meta name="twitter:description" content="Route Claude Code to any LLM — documentation, changelog and verified downloads.">
+  <meta name="twitter:image" content="https://ding-ding-projects.github.io/claude-code-router/assets/social-preview.png">
+  <meta name="theme-color" content="#f5fafa" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#101414" media="(prefers-color-scheme: dark)">
+  <!-- ccr-content-head:end -->
   <!--build:base-->
   <link rel="stylesheet" href="assets/css/tokens.css">
   <link rel="stylesheet" href="assets/css/m3.css">
@@ -68,6 +88,10 @@
             <p><a class="btn btn--tonal" href="settings.html"><span data-i18n="nav.settings">Settings</span></a></p>
           </article>
         </div>
+
+        <!-- CONTENT LANE SLOT: landing feature cards rendered from the bundled
+             docs articles mount here (site/assets/js/content.js). -->
+        <section id="home-features-slot"></section>
       </section>
 
       <!-- DOCS PANE (wave-2 mounts here) -->
