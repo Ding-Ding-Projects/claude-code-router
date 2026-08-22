@@ -1,10 +1,16 @@
 import {
   CLAUDE_CODE_DEFAULT_ENV,
+  CLAUDE_DESIGN_PLUGIN_ID,
+  CLAUDE_SHIP_PLUGIN_ID,
   DEFAULT_OVERVIEW_WIDGETS,
   DEFAULT_TRAY_COMPONENT_VARIANTS,
   DEFAULT_TRAY_WIDGETS,
   DEFAULT_TRAY_WINDOW_MODULES,
+  knownGatewayPluginDefaultApps,
+  knownGatewayPluginDefaultPermissions,
+  knownGatewayPluginDefaultSurfaces,
   type AppConfig,
+  type GatewayPluginConfig,
   type ProxyRouteTarget
 } from "@ccr/core/contracts/app";
 import { defaultRequestLogBodyBytes } from "@ccr/core/observability/request-log-limits";
@@ -21,6 +27,29 @@ export const DEFAULT_PROXY_TARGETS: ProxyRouteTarget[] = [
 export type DefaultAppConfigOptions = {
   coreHost?: string;
 };
+
+// Claude Design and Claude Ship ship pre-registered and enabled. The plugin
+// module path is intentionally omitted: it is resolved at desktop runtime by
+// withClaudeDesignRuntimePluginConfig / withClaudeShipRuntimePluginConfig from
+// the bundled plugin assets, so defaults never carry machine-specific paths.
+export function createDefaultGatewayPlugins(): GatewayPluginConfig[] {
+  return [
+    {
+      apps: knownGatewayPluginDefaultApps(CLAUDE_DESIGN_PLUGIN_ID),
+      enabled: true,
+      id: CLAUDE_DESIGN_PLUGIN_ID,
+      permissions: knownGatewayPluginDefaultPermissions(CLAUDE_DESIGN_PLUGIN_ID),
+      surfaces: knownGatewayPluginDefaultSurfaces(CLAUDE_DESIGN_PLUGIN_ID)
+    },
+    {
+      apps: knownGatewayPluginDefaultApps(CLAUDE_SHIP_PLUGIN_ID),
+      enabled: true,
+      id: CLAUDE_SHIP_PLUGIN_ID,
+      permissions: knownGatewayPluginDefaultPermissions(CLAUDE_SHIP_PLUGIN_ID),
+      surfaces: knownGatewayPluginDefaultSurfaces(CLAUDE_SHIP_PLUGIN_ID)
+    }
+  ];
+}
 
 export function createDefaultAppConfig(options: DefaultAppConfigOptions = {}): AppConfig {
   const coreHost = options.coreHost ?? "127.0.0.1";
@@ -125,7 +154,7 @@ export function createDefaultAppConfig(options: DefaultAppConfigOptions = {}): A
       requestLogs: false
     },
     preferredProvider: "",
-    plugins: [],
+    plugins: createDefaultGatewayPlugins(),
     profile: {
       claudeCode: {
         enabled: true,
