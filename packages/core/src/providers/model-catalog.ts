@@ -287,7 +287,7 @@ function catalogReasoningLevels(
 ): NonNullable<ProviderModelMetadata["supportedReasoningLevels"]> {
   const sourceMetadata = isRecord(sourceRecord.metadata) ? sourceRecord.metadata : {};
   const reasoningOptions = Array.isArray(sourceMetadata.reasoningOptions) ? sourceMetadata.reasoningOptions : [];
-  const allowed = new Set(["low", "medium", "high", "xhigh", "max", "ultra"]);
+  const allowed = new Set(["low", "medium", "high", "xhigh", "max", "ultra", "ultracode"]);
   const efforts = uniqueStrings(reasoningOptions.flatMap((option) =>
     isRecord(option) && stringValue(option.type).toLowerCase() === "effort"
       ? stringListValue(option.values).map((effort) => effort.toLowerCase())
@@ -299,7 +299,8 @@ function catalogReasoningLevels(
     booleanValue(capabilities.highReasoningEffort) ? "high" : "",
     booleanValue(capabilities.xhighReasoningEffort) ? "xhigh" : "",
     booleanValue(capabilities.maxReasoningEffort) ? "max" : "",
-    booleanValue(capabilities.ultraReasoningEffort) ? "ultra" : ""
+    booleanValue(capabilities.ultraReasoningEffort) ? "ultra" : "",
+    booleanValue(capabilities.ultracodeReasoningEffort) ? "ultracode" : ""
   ].filter(Boolean);
   return inferred.map((effort) => ({ description: reasoningEffortDescription(effort), effort }));
 }
