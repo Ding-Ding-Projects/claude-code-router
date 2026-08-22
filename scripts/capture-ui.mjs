@@ -30,7 +30,7 @@
  *       off-screen desktop through the lowlevel headless route); drive THAT
  *       instance over its debugging port and leave the process untouched.
  */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   copyFileSync,
@@ -184,7 +184,7 @@ function runPowerShell(script) {
   const ps1 = path.join(tmpdir(), `ccr-capture-${Date.now()}.ps1`);
   writeFileSync(ps1, script.trim() + "\n", "utf8");
   try {
-    const result = spawn.sync("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1], {
+    const result = spawnSync("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1], {
       stdio: ["ignore", "pipe", "pipe"],
       encoding: "utf8"
     });
@@ -445,7 +445,7 @@ async function main() {
 async function cleanupApp(child, scratch) {
   if (child.pid && !child.killed) {
     // Kill the whole process tree; Electron keeps helper children alive.
-    spawn.sync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+    spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" });
   }
   await sleep(1000);
   try {
@@ -519,7 +519,7 @@ async function composeSocialPreview(homeDarkPath) {
   const ps1 = path.join(tmpdir(), `ccr-social-${Date.now()}.ps1`);
   writeFileSync(ps1, buildSocialPreviewScript({ sourcePng: homeDarkPath, destPng }), "utf8");
   try {
-    const result = spawn.sync(
+    const result = spawnSync(
       "powershell.exe",
       ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1],
       { stdio: ["ignore", "pipe", "pipe"], encoding: "utf8" }
