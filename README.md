@@ -265,6 +265,26 @@ Claude Code · Claude Design · Codex · Grok CLI · Kimi CLI · Kilo Code · Op
 | **Observability** | Request and response details; resolved provider, model, and credential; status; latency; tokens; estimated cost; tool calls; agent traces |
 | **AgentClaw** | Agent relay through Weixin iLink, WeCom, Slack, Discord, Telegram, LINE, Feishu, and DingTalk |
 
+## Features
+
+Highlights from this release cycle. Each deep dive covers behavior, configuration, failure modes, security notes, and verification.
+
+- **Material Design 3 management UI.** The management UI is rebuilt on an M3 token system (`packages/ui/src/styles/m3`): color roles for light and dark via `--md-sys-*` custom properties, plus type scale, shape, elevation, and motion tokens. A `ThemeProvider` applies the chosen scheme through a `data-md-theme` attribute and persists it in `localStorage`, restoring before first paint; home, tray, and browser surfaces are converted in this cycle.
+- **`ultracode` reasoning effort.** A new top tier above `ultra`/`xhigh`/`max`, exposed through the gateway model catalog only for capable models. Named efforts pass through to providers that take them; where upstream uses a numeric thinking budget, `ultracode` maps to the model's maximum budget. It appears in the Claude Code desktop model picker and the management UI picker with English and Traditional Chinese labels.
+- **Organization banner.** A persisted `organizationBanner` config block — `{enabled, text ≤ 200 chars, optional https imageUrl ≤ 500 chars}` — editable from settings inputs, rendered as an M3-styled header strip on Home, and completely hidden when disabled.
+
+### Docs index
+
+Deep-dive articles live in [`docs/features/`](docs/features/):
+
+| Article | Covers |
+| --- | --- |
+| [Material Design 3 management UI](docs/features/material-design-3-ui.md) | Token system, theming, converted surfaces |
+| [Reasoning effort: ultracode](docs/features/reasoning-effort-ultracode.md) | New top effort tier, catalog gating, request mapping, pickers |
+| [Organization banner](docs/features/organization-banner.md) | Config schema, settings inputs, Home header strip |
+
+Release status for these items is tracked in [CHANGELOG.md](CHANGELOG.md) (Unreleased) and [ROADMAP.md](ROADMAP.md); see [HANDOFF.md](HANDOFF.md) for what is merged versus still in review.
+
 ## Go deeper when you are ready
 
 The complete documentation lives at **[ccrdesk.top](https://ccrdesk.top/)**.
