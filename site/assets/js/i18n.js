@@ -371,6 +371,49 @@ export const DICT = {
     en: 'Disclosure: the funny-level sliders style all copy on this site — including errors and warnings. English and Cantonese both ship at level 5; change either any time. Facts (versions, warnings, what a control does) never change.',
     zh: '披露：搞笑程度滑桿會影響全站文案——包括錯誤同警告。英文同廣東話都預設第 5 級，隨時可調。事實（版本、警告、控件作用）永遠唔變。',
   },
+
+  /* settings rows (labels + explanations) */
+  'settings.language.label': { en: 'Language mode', zh: '語言模式' },
+  'settings.language.desc': {
+    en: 'English, playful Hong Kong Cantonese, or bilingual (primary plus a compact second line). Applies immediately.',
+    zh: '英文、搞笑廣東話、或者雙語（主行加一行細字）。即刻生效。',
+  },
+  'settings.funny.en.label': { en: 'Funny level — English', zh: '搞笑程度——英文' },
+  'settings.funny.zh.label': { en: 'Funny level — Cantonese', zh: '搞笑程度——廣東話' },
+  'settings.showEmojis.label': { en: 'Show emojis in dialogs and messages', zh: '喺對話框同訊息顯示 emoji' },
+  'settings.showEmojis.desc': {
+    en: 'Adds a relevant emoji decoration to dialogs, toasts and status lines when on. Never added to buttons, action labels or field labels.',
+    zh: '開咗之後，對話框、toast 同狀態列會有相關 emoji 點點綴。掣、動作標籤同欄位標籤永遠唔會有。',
+  },
+  'settings.notify.timeout.label': { en: 'Info auto-dismiss after', zh: '資訊通知自動收起時間' },
+  'settings.notify.timeout.desc': {
+    en: 'Informational snackbars auto-dismiss after this long. Errors and warnings ALWAYS persist until dismissed, whatever this value is.',
+    zh: '資訊式通知會喺呢段時間後自動收起。錯誤同警告無論點設定都會留到你自己閂。',
+  },
+  'settings.notify.cap.label': { en: 'History cap', zh: '歷史上限' },
+  'settings.notify.sample.label': { en: 'Fire one of each kind', zh: '每種通知發一個' },
+  'settings.notify.sample.desc': {
+    en: 'Shows one info, success, warning and error snackbar so you can see the persistence behaviour for yourself.',
+    zh: '彈一個 info、success、warning、error 出嚟，等你親眼睇下邊啲會留低。',
+  },
+  'settings.tabs.dock.desc': {
+    en: 'Which edge the tab strip docks to. Changeable here AND from the strip context menu; persisted per visitor.',
+    zh: '分頁列停喺哪一邊。呢度同分頁列右鍵選單都可以改；會記住你嘅選擇。',
+  },
+  'settings.tabs.discovery.desc': {
+    en: 'Four searches: current strip, inside every group, groups by name, and a master search across all tabs — each with its own regex builder.',
+    zh: '四個搜尋：現行分頁列、每個群組內、按名稱搵群組、同埋跨所有分頁嘅總搜尋——各自都有 regex 建造器。',
+  },
+  'settings.motion.label': { en: 'Motion', zh: '動態效果' },
+  'settings.motion.desc': {
+    en: 'Auto follows your system reduced-motion setting. Reduced disables animation site-wide AND settles the rainbow on ONE fixed hue.',
+    zh: '自動會跟系統嘅減少動態設定。減少模式會停用全站動畫，仲會將彩虹定喺單一色相。',
+  },
+  'settings.focus.label': { en: 'Focus ring width', zh: '焦點環粗幼' },
+  'settings.focus.desc': {
+    en: 'Keyboard focus indicators stay visible everywhere; make them thicker if you like.',
+    zh: '鍵盤焦點指示全部可見；想粗啲就較粗啲。',
+  },
 };
 
 /* Bilingual compact-secondary styling hook (kept tiny; app.css carries it). */

@@ -55,13 +55,16 @@ export function openMenu({ anchor, point, items, onSelect, label = 'Menu', minWi
   let visible = [];
 
   function flatItems(list_) {
+    // Submenus flatten inline right after their separator+heading position;
+    // the parent entry itself is not rendered (a dead parent row would be a
+    // control that looks clickable and does nothing).
     const out = [];
     for (const it of list_ || []) {
-      if (it.separatorBefore) out.push({ separator: true });
+      if (it.separatorBefore && out.length) out.push({ separator: true });
       if (it.submenu) {
-        out.push({ ...it, __hasSub: true });
-        out.push(...flatItems(it.submenu).map((s) => ({ ...s, __parentLabel: it.label ?? it.labelKey })));
-      } else if (!it.__parentLabel) {
+        out.push({ heading: true, label: it.labelKey ? i18n.t(it.labelKey) : it.label ?? '' });
+        out.push(...flatItems(it.submenu));
+      } else {
         out.push(it);
       }
     }
@@ -77,6 +80,12 @@ export function openMenu({ anchor, point, items, onSelect, label = 'Menu', minWi
     let shown = 0;
     for (const it of all) {
       if (it.separator) continue;
+      if (it.heading) {
+        const head = el('div', { class: 'body-small', attrs: { role: 'presentation' }, children: [it.label] });
+        head.style.padding = '8px 16px 4px';
+        list.append(head);
+        continue;
+      }
       const labelText = it.labelKey ? i18n.t(it.labelKey) : it.label ?? '';
       if (!c.empty && !c.test(labelText)) continue;
       shown++;

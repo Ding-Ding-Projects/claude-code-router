@@ -301,7 +301,6 @@ function moveRelative(srcId, targetId, before) {
 function togglePin(id) {
   if (state.pinned.includes(id)) {
     state.pinned = state.pinned.filter((x) => x !== id);
-    i18n.deco('📌');
     notifyInfo(i18n.t('tabs.unpinned'));
   } else {
     state.pinned.push(id);

@@ -17,12 +17,18 @@ import { attachSearchField } from './search.js';
 import { openDialog } from './dialog.js';
 import { superConfirm } from './superconfirm.js';
 
-const HISTORY_CAP = 200;
+const HISTORY_CAP_DEFAULT = 200;
 let history = store.get('notify.history', []);
 if (!Array.isArray(history)) history = [];
 
+function cap() {
+  const c = Number(store.get('notify.historyCap', HISTORY_CAP_DEFAULT));
+  return Number.isFinite(c) && c >= 10 ? Math.min(1000, c) : HISTORY_CAP_DEFAULT;
+}
+
 function saveHistory() {
-  if (history.length > HISTORY_CAP) history = history.slice(-HISTORY_CAP);
+  const c = cap();
+  if (history.length > c) history = history.slice(-c);
   store.set('notify.history', history);
 }
 
@@ -39,7 +45,8 @@ export function push({ kind = 'info', title, body = '', timeoutMs }) {
   };
   history.push(rec);
   saveHistory();
-  showSnackbar(rec, timeoutMs ?? (kind === 'error' || kind === 'warning' ? null : 5200));
+  const autoMs = timeoutMs ?? store.get('notify.infoTimeoutMs', 5200);
+  showSnackbar(rec, kind === 'error' || kind === 'warning' ? null : autoMs);
   return id;
 }
 

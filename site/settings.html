@@ -53,7 +53,15 @@
         <h1 class="headline-medium" data-i18n="settings.title">Settings</h1>
         <p class="body-medium" data-i18n="settings.intro">Everything on this site is customizable and stored locally in your browser. Nothing here leaves this machine.</p>
 
-        <div id="settings-tabs" class="m3-tabs scroll-x" role="tablist" aria-label="Settings sections"></div>
+        <div id="settings-tabs" class="m3-tabs scroll-x" role="tablist" aria-label="Settings sections">
+          <button class="m3-tab" type="button" role="tab" id="stab-appearance" data-tab="appearance" aria-controls="spane-appearance">Appearance</button>
+          <button class="m3-tab" type="button" role="tab" id="stab-language" data-tab="language" aria-controls="spane-language">Language &amp; voice</button>
+          <button class="m3-tab" type="button" role="tab" id="stab-notifications" data-tab="notifications" aria-controls="spane-notifications">Notifications</button>
+          <button class="m3-tab" type="button" role="tab" id="stab-tabs" data-tab="tabs" aria-controls="spane-tabs">Tabs &amp; layout</button>
+          <button class="m3-tab" type="button" role="tab" id="stab-accessibility" data-tab="accessibility" aria-controls="spane-accessibility">Accessibility &amp; motion</button>
+          <button class="m3-tab" type="button" role="tab" id="stab-data" data-tab="data" aria-controls="spane-data">Data &amp; privacy</button>
+          <button class="m3-tab" type="button" role="tab" id="stab-about" data-tab="about" aria-controls="spane-about">About</button>
+        </div>
 
         <div class="settings-layout" id="settings-panes">
           <section class="settings-pane" id="spane-appearance" role="tabpanel" aria-labelledby="stab-appearance" tabindex="-1"></section>
@@ -62,7 +70,15 @@
           <section class="settings-pane" id="spane-tabs" role="tabpanel" aria-labelledby="stab-tabs" tabindex="-1" hidden></section>
           <section class="settings-pane" id="spane-accessibility" role="tabpanel" aria-labelledby="stab-accessibility" tabindex="-1" hidden></section>
           <section class="settings-pane" id="spane-data" role="tabpanel" aria-labelledby="stab-data" tabindex="-1" hidden></section>
-          <section class="settings-pane" id="spane-about" role="tabpanel" aria-labelledby="stab-about" tabindex="-1" hidden></section>
+          <section class="settings-pane" id="spane-about" role="tabpanel" aria-labelledby="stab-about" tabindex="-1" hidden>
+            <div class="slot" style="grid-column:1/-1">
+              <h3>Wave-2 mount points</h3>
+              <div id="lock-layer-slot"></div>
+              <div id="authenticator-slot"></div>
+              <div id="history-slot"></div>
+              <div id="scheduled-slot"></div>
+            </div>
+          </section>
         </div>
 
         <p class="coverage-warn" id="coverage-warn" hidden role="alert"></p>

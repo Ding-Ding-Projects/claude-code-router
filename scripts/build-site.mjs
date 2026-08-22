@@ -78,7 +78,8 @@ for (const abs of files) {
 
   if (rel.endsWith('.html')) {
     let html = buf.toString('utf8');
-    const injectTag = `<base href="${BASE_PATH}">\n  <meta name="ccr-base-path" content="${BASE_PATH}">`;
+    const pkgVersion = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')).version ?? '0.0.0';
+    const injectTag = `<base href="${BASE_PATH}">\n  <meta name="ccr-base-path" content="${BASE_PATH}">\n  <meta name="ccr-site-version" content="${pkgVersion}">`;
     if (html.includes('<!--build:base-->')) {
       html = html.replace('<!--build:base-->', injectTag);
     } else {

@@ -501,6 +501,23 @@ dialog::backdrop { background: color-mix(in srgb, var(--md-sys-color-scrim) 55%,
   border: 0;
 }
 
+/* Skip link becomes visible when focused (keyboard users first). */
+.skip-link:focus-visible {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 2000;
+  width: auto;
+  height: auto;
+  margin: 0;
+  clip: auto;
+  padding: 10px 18px;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-full);
+  text-decoration: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
