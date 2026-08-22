@@ -744,6 +744,7 @@ function createClaudeCodeModelCapabilities(
       medium: { supported: supportsReasoningLevel("medium") },
       supported: supportsReasoning,
       ultra: { supported: supportsReasoningLevel("ultra") },
+      ultracode: { supported: supportsReasoningLevel("ultracode") },
       xhigh: { supported: supportsReasoningLevel("xhigh") }
     },
     image_input: { supported: supportsImageInput },
@@ -806,6 +807,7 @@ function createDefaultClaudeCodeModelCapabilities(
       medium: { supported: supportsReasoningLevel("medium") },
       supported: supportsReasoning,
       ultra: { supported: supportsReasoningLevel("ultra") },
+      ultracode: { supported: supportsReasoningLevel("ultracode") },
       xhigh: { supported: supportsReasoningLevel("xhigh") }
     },
     image_input: { supported: options.imageInput ?? true },
