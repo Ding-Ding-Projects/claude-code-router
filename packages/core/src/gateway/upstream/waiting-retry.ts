@@ -249,6 +249,7 @@ export function startWaitingResponseStream(input: {
     response,
     async adopt(upstreamResponse: Response): Promise<void> {
       stopKeepAlive();
+      copyAdoptedUpstreamHeaders(response.headers, upstreamResponse.headers);
       const body = upstreamResponse.body;
       if (!body) {
         closeController();
@@ -298,6 +299,42 @@ async function cancelUpstreamBody(body: ReadableStream<Uint8Array>): Promise<voi
     await body.cancel();
   } catch {
     // Best-effort upstream cleanup must not mask the client disconnect.
+  }
+}
+
+/**
+ * Hop-by-hop, framing, and client-identity headers that are never copied from
+ * an adopted upstream response onto the held-open stream: framing belongs to
+ * the synthesized SSE response (whose body now also carries keep-alive frames,
+ * so content-length would be wrong), and set-cookie must not leak one upstream
+ * credential's cookies to every client of this gateway response.
+ */
+const adoptedUpstreamHeaderDenyList = new Set([
+  "connection",
+  "content-encoding",
+  "content-length",
+  "content-type",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "set-cookie",
+  "set-cookie2",
+  "te",
+  "trailer",
+  "transfer-encoding",
+  "upgrade"
+]);
+
+function copyAdoptedUpstreamHeaders(target: Headers, upstreamHeaders: Headers): void {
+  for (const [name, value] of upstreamHeaders) {
+    if (!adoptedUpstreamHeaderDenyList.has(name.toLowerCase())) {
+      try {
+        target.set(name, value);
+      } catch {
+        // A forbidden response-header name slipped through on an exotic
+        // runtime; skip it rather than failing an otherwise good adoption.
+      }
+    }
   }
 }
 

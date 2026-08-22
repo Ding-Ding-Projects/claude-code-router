@@ -211,6 +211,50 @@ test("anthropic protocol receives its own ping event as the keep-alive frame", (
   assert.equal(waitingKeepAliveChunk(undefined), ": keep-alive\n\n");
 });
 
+test("success after retry forwards safe upstream headers onto the adopted response", async () => {
+  const stub = withStubbedFetch((count) => count === 1
+    ? new Response(null, { status: 429 })
+    : new Response('event: message_start\ndata: {"type":"message_start"}\n\n', {
+        headers: {
+          "anthropic-version": "2023-06-01",
+          "connection": "close",
+          "content-length": "58",
+          "content-type": "text/event-stream",
+          "request-id": "req_01abc",
+          "set-cookie": "session=upstream-secret; Path=/",
+          "transfer-encoding": "chunked",
+          "x-request-id": "req_01abc"
+        },
+        status: 200
+      }));
+  try {
+    const result = await fetchUpstreamWithFallback(baseInput({
+      body: Buffer.from(JSON.stringify({ messages: [], model: "test-model", stream: true })),
+      waitingRetry: { cooldownMs: 10 }
+    }));
+    assert.equal(stub.count, 2);
+    assert.equal(result.response.status, 200);
+    const headers = result.response.headers;
+    // Safe end-to-end headers survive the adoption.
+    assert.equal(headers.get("request-id"), "req_01abc");
+    assert.equal(headers.get("x-request-id"), "req_01abc");
+    assert.equal(headers.get("anthropic-version"), "2023-06-01");
+    // Framing stays owned by the synthesized SSE response.
+    assert.ok(headers.get("content-type").includes("text/event-stream"));
+    // Hop-by-hop, length, and credential-scoped headers never leak through.
+    assert.equal(headers.get("connection"), null);
+    assert.equal(headers.get("content-length"), null);
+    assert.equal(headers.get("transfer-encoding"), null);
+    assert.equal(headers.get("set-cookie"), null);
+    assert.ok(
+      (await result.response.text()).endsWith('event: message_start\ndata: {"type":"message_start"}\n\n'),
+      "the upstream body is still adopted verbatim after the keep-alive frames"
+    );
+  } finally {
+    stub.restore();
+  }
+});
+
 test("a client abort during adoption cancels the pending upstream body read", async () => {
   const controller = new AbortController();
   const instance = startWaitingResponseStream({
