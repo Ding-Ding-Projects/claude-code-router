@@ -17,15 +17,21 @@ This branch touches no files under `packages/**` or `.github/**`.
 
 ## Branches in flight
 
+**Status note (2026-08-22): every branch listed here is a local working branch
+owned by a parallel lane of this release train. None of them exists on GitHub
+yet — there is nothing to fetch or open a PR against.** "In progress" below
+means review inside the owning lane, not an open pull request. Update this
+table as each branch is actually pushed and merged.
+
 | Branch | Lane | State |
 | --- | --- | --- |
-| `feat/m3-tokens` | M3 token system under `packages/ui/src/styles/m3` | implementation in review |
-| `feat/m3-home-app` | Home surface conversion to M3 tokens | implementation in review |
-| `feat/m3-tray-browser` | Tray and browser surface conversion | implementation in review |
-| `feat/ultracode-effort-core` | `ultracode` tier in gateway catalog + request transform | implementation in review |
-| `feat/ultracode-effort-ui` | `ultracode` in desktop + management UI pickers (en/zh-Hant) | implementation in review |
-| `feat/org-banner` | Organization banner config, settings inputs, home strip | implementation in review |
-| `docs/release-docs` | This lane: README features section, feature articles, roadmap/changelog/handoff | ready for review |
+| `feat/m3-tokens` | M3 token system under `packages/ui/src/styles/m3` | pending — parallel fleet, local only, not yet pushed |
+| `feat/m3-home-app` | Home surface conversion to M3 tokens | pending — parallel fleet, local only, not yet pushed |
+| `feat/m3-tray-browser` | Tray and browser surface conversion | pending — parallel fleet, local only, not yet pushed |
+| `feat/ultracode-effort-core` | `ultracode` tier in gateway catalog + request transform | pending — parallel fleet, local only, not yet pushed |
+| `feat/ultracode-effort-ui` | `ultracode` in desktop + management UI pickers (en/zh-Hant) | pending — parallel fleet, local only, not yet pushed |
+| `feat/org-banner` | Organization banner config, settings inputs, home strip | pending — parallel fleet, local only, not yet pushed |
+| `docs/release-docs` | This lane: README features section, feature articles, roadmap/changelog/handoff | this lane — local only, ready for review |
 
 ## Verification state
 
