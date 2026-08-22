@@ -23,6 +23,13 @@ export type AppCopy = {
     launchAtLogin: string;
     launchAtLoginDescription: string;
     observability: string;
+    organizationBanner: string;
+    organizationBannerDescription: string;
+    organizationBannerImageUrl: string;
+    organizationBannerImageUrlHint: string;
+    organizationBannerImageUrlInvalid: string;
+    organizationBannerText: string;
+    organizationBannerDismiss: string;
     proxy: string;
     requestLogs: string;
     requestLogsDescription: string;
@@ -137,6 +144,13 @@ export const appCopy: Record<ResolvedLanguage, AppCopy> = {
       launchAtLogin: "Launch at login",
       launchAtLoginDescription: "Open Claude Code Router automatically when you sign in to this computer.",
       observability: "Logs & Observability",
+      organizationBanner: "Organization banner",
+      organizationBannerDescription: "Show an announcement strip with text and an optional image at the top of the app.",
+      organizationBannerImageUrl: "Image URL",
+      organizationBannerImageUrlHint: "Optional http(s) image shown beside the banner text.",
+      organizationBannerImageUrlInvalid: "Enter a complete http(s) image URL.",
+      organizationBannerText: "Text",
+      organizationBannerDismiss: "Dismiss banner",
       proxy: "Proxy",
       requestLogs: "Request logs",
       requestLogsDescription: "Record gateway requests and show the Logs page.",
@@ -694,6 +708,13 @@ export const appCopy: Record<ResolvedLanguage, AppCopy> = {
       launchAtLogin: "开机自启",
       launchAtLoginDescription: "登录系统后自动打开 Claude Code Router。",
       observability: "日志与观测",
+      organizationBanner: "组织横幅",
+      organizationBannerDescription: "在应用顶部显示带文字和可选图片的公告横幅。",
+      organizationBannerImageUrl: "图片 URL",
+      organizationBannerImageUrlHint: "可选的 http(s) 图片，显示在横幅文字旁边。",
+      organizationBannerImageUrlInvalid: "请输入完整的 http(s) 图片链接。",
+      organizationBannerText: "横幅文字",
+      organizationBannerDismiss: "关闭横幅",
       proxy: "代理",
       requestLogs: "请求日志",
       requestLogsDescription: "记录网关请求并显示日志页。",

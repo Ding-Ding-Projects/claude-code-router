@@ -1,6 +1,7 @@
 import type { ComponentProps } from "react";
 import { MorphIcon } from "@musistudio/lucide-morph-react";
 import { collapseSidebarToExpandInspectorMorph } from "@/lib/morph-icon";
+import { HomeBanner } from "@/components/banner/HomeBanner";
 import {
   AnimatePresence, AppConfig, AppCopy, Button, Check, CircleAlert, cn, EndpointTitleBar,
   AppUpdateStatus, GatewayStatus, listSpringTransition, LucideIcon, motion, motionEase,
@@ -276,6 +277,7 @@ export function MainLayout({
             gatewayStatus={gatewayStatus}
           />
         </div>
+        <HomeBanner banner={config.organizationBanner} />
         <GatewayStartupErrorBanner
           className="mx-5 mt-3 max-[720px]:mx-3"
           message={gatewayStartupError}

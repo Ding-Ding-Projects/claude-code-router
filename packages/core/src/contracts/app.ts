@@ -1235,6 +1235,15 @@ export type TrayBalanceProgressConfig = {
   provider: string;
 };
 
+export const ORGANIZATION_BANNER_TEXT_MAX_LENGTH = 200;
+export const ORGANIZATION_BANNER_IMAGE_URL_MAX_LENGTH = 500;
+
+export type OrganizationBannerConfig = {
+  enabled: boolean;
+  text: string;
+  imageUrl?: string;
+};
+
 export type TrayAccountComponentVariant = "bar" | "compact" | "ring" | "arc" | "stacked";
 export type TrayFlowComponentVariant = "line" | "area" | "bar" | "sparkline";
 export type TrayStatsComponentVariant = "cards" | "compact" | "pills";
@@ -1767,6 +1776,7 @@ export type AppConfig = {
   mediaTools: MediaToolsConfig;
   launchAtLogin: boolean;
   observability: ObservabilityConfig;
+  organizationBanner: OrganizationBannerConfig;
   preferredProvider: string;
   plugins: GatewayPluginConfig[];
   profile: ProfileRuntimeConfig;
