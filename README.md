@@ -265,6 +265,36 @@ Claude Code · Claude Design · Codex · Grok CLI · Kimi CLI · Kilo Code · Op
 | **Observability** | Request and response details; resolved provider, model, and credential; status; latency; tokens; estimated cost; tool calls; agent traces |
 | **AgentClaw** | Agent relay through Weixin iLink, WeCom, Slack, Discord, Telegram, LINE, Feishu, and DingTalk |
 
+## Features
+
+Three capabilities are landing in the current release train. Each has a full write-up under [`docs/features/`](docs/features/).
+
+### Material Design 3 management UI
+
+The management UI is rebuilt on a Material Design 3 token system under `packages/ui/src/styles/m3`: color roles for light and dark themes exposed as `--md-sys-*` custom properties, plus type scale, shape, elevation, and motion tokens. A `ThemeProvider` applies the active theme through a `data-md-theme` attribute and persists the choice in `localStorage`, and the home, tray, and browser surfaces are converted to the token layer.
+
+Full article: [Material Design 3 management UI](docs/features/material-design-3-ui.md)
+
+### Ultracode reasoning effort
+
+`ultracode` is a new top reasoning-effort tier sitting above `ultra`, `xhigh`, and `max`. Capable models expose it through the gateway model catalog, the upstream request transform passes the named effort through and applies the maximum thinking budget where the provider takes a numeric value, and both the Claude Code desktop model picker and the management UI picker list it with English and Traditional Chinese (zh-Hant) labels.
+
+Full article: [Ultracode reasoning effort](docs/features/reasoning-effort-ultracode.md)
+
+### Organization banner
+
+A persisted `organizationBanner` configuration—`enabled`, `text` up to 200 characters, optional `https` image URL up to 500 characters—renders an M3-styled header strip on the management UI home. Settings inputs manage it with inline validation, and the strip is hidden entirely when disabled.
+
+Full article: [Organization banner](docs/features/organization-banner.md)
+
+### Documentation index
+
+| Article | Covers |
+| --- | --- |
+| [Material Design 3 management UI](docs/features/material-design-3-ui.md) | Token system, theming with `data-md-theme`, converted surfaces |
+| [Ultracode reasoning effort](docs/features/reasoning-effort-ultracode.md) | New top tier, catalog exposure, request transform mapping |
+| [Organization banner](docs/features/organization-banner.md) | Config schema, settings inputs, home header strip |
+
 ## Go deeper when you are ready
 
 The complete documentation lives at **[ccrdesk.top](https://ccrdesk.top/)**.
