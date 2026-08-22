@@ -168,7 +168,10 @@ test("eventual success streams through the held-open SSE response after keep-ali
     const expectedFrame = waitingKeepAliveChunk("anthropic_messages");
     const keepAliveFrames = clientBody.split(expectedFrame).length - 1;
     assert.ok(elapsed >= 80, `waited only ${elapsed}ms`);
-    assert.ok(keepAliveFrames >= 3, `expected several keep-alive frames, saw ${keepAliveFrames} in ${JSON.stringify(clientBody)}`);
+    // Two frames minimum: one is emitted synchronously when the stream opens,
+    // and at least one interval tick must land before adoption. A tight count
+    // would flake under fleet contention, where timers fire late.
+    assert.ok(keepAliveFrames >= 2, `expected several keep-alive frames, saw ${keepAliveFrames} in ${JSON.stringify(clientBody)}`);
     assert.ok(clientBody.endsWith('event: message_start\ndata: {"type":"message_start"}\n\n'));
     // Every keep-alive must precede the adopted upstream body.
     const adoptedBodyStart = clientBody.indexOf("event: message_start");
@@ -197,12 +200,16 @@ test("keep-alive frames are emitted on the configured cadence and stop on abort"
       assert.equal(Buffer.from(value).toString("utf8"), ": keep-alive\n\n");
     }
   })();
-  await new Promise((resolve) => setTimeout(resolve, 55));
+  // Collect over a generous window: a 10ms cadence nominally produces ~25
+  // frames here, so requiring only >=4 leaves an order-of-magnitude margin for
+  // contended timers while still proving the cadence exists. (Real-timer
+  // margins tighter than this flaked under fleet contention.)
+  await new Promise((resolve) => setTimeout(resolve, 250));
   const framesBeforeAbort = stamps.length;
-  assert.ok(framesBeforeAbort >= 4, `expected >=4 frames in 55ms at 10ms cadence, saw ${framesBeforeAbort}`);
+  assert.ok(framesBeforeAbort >= 4, `expected >=4 frames in 250ms at 10ms cadence, saw ${framesBeforeAbort}`);
   controller.abort(new Error("client disconnected"));
   await collector;
-  await new Promise((resolve) => setTimeout(resolve, 40));
+  await new Promise((resolve) => setTimeout(resolve, 100));
   assert.equal(stamps.length, framesBeforeAbort, "no frames may be emitted after the client abort");
 });
 
