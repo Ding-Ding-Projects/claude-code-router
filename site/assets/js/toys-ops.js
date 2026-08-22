@@ -781,8 +781,9 @@ export function createBulkList(opts) {
 
   const toolbar = el('div', { class: 'ops-toolbar' });
   const qInput = el('input', { class: 'input', attrs: { type: 'text', placeholder: L('hist.search'), 'aria-label': L('hist.search') } });
-  attachSearchField(qInput, { id: opts.searchId || 'bulk-list', storage: true, onChange: () => render(true) });
-  toolbar.append(qInput);
+  // attachSearchField returns the WRAPPER that carries .ccrSearch — keep it.
+  const searchWrap = attachSearchField(qInput, { id: opts.searchId || 'bulk-list', storage: true, onChange: () => render(true) });
+  toolbar.append(searchWrap);
 
   const facetRow = el('div', { class: 'ops-facets', attrs: { role: 'group' } });
   toolbar.append(facetRow);
@@ -806,7 +807,7 @@ export function createBulkList(opts) {
   }
 
   function visibleItems() {
-    const compiled = qInput.ccrSearch.compile();
+    const compiled = searchWrap.ccrSearch.compile();
     let items = allItems();
     if (activeFacets.size && opts.facets) {
       const fmap = new Map(opts.facets(allItems()).map((f) => [f.id, f]));
@@ -1034,7 +1035,7 @@ export function createBulkList(opts) {
     },
     bulkRun,
     setSearchText: (q) => {
-      qInput.ccrSearch.setState({ query: q });
+      searchWrap.ccrSearch.setState({ query: q });
     },
   };
 }
