@@ -95,6 +95,7 @@ function fallbackModelCatalogEntry(model: string): ModelCatalogEntry | undefined
       supports1MContext: true,
       toolCalling: true,
       ultraReasoningEffort: !/^gpt-5\.6-luna(?:-|$)/.test(modelName),
+      ultracodeReasoningEffort: !/^gpt-5\.6-luna(?:-|$)/.test(modelName),
       vision: true,
       webSearch: true,
       xhighReasoningEffort: true
@@ -422,6 +423,7 @@ function normalizeReasoningEffort(value: unknown): string {
   if (normalized === "low") return "low";
   if (normalized === "medium") return "medium";
   if (normalized === "high") return "high";
+  if (normalized === "ultracode") return "ultracode";
   if (normalized === "xhigh" || normalized === "extrahigh" || normalized === "max") return "xhigh";
   return "";
 }

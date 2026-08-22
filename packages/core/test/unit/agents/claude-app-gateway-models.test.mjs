@@ -13,6 +13,7 @@ import {
   shouldServeClaudeCliBootstrapResponse,
   shouldServeGatewayModelsResponse
 } from "@ccr/core/gateway/features/model-discovery.ts";
+import { modelCatalogReasoningEffortConfig } from "@ccr/core/gateway/model-catalog.ts";
 import { ModelRegistry } from "@ccr/core/routing/model-registry.ts";
 
 function createConfig({ profileModel, providers = [], virtualModelProfiles = [] } = {}) {
@@ -488,7 +489,8 @@ test("Claude App discovery honors configured reasoning levels for uncatalogued m
             supportedReasoningLevels: [
               { description: "Low", effort: "low" },
               { description: "High", effort: "high" },
-              { description: "Ultra", effort: "ultra" }
+              { description: "Ultra", effort: "ultra" },
+              { description: "Ultracode", effort: "ultracode" }
             ],
             supportsReasoningSummaries: true
           }
@@ -512,6 +514,15 @@ test("Claude App discovery honors configured reasoning levels for uncatalogued m
   assert.equal(model.capabilities.effort.xhigh.supported, false);
   assert.equal(model.capabilities.effort.max.supported, false);
   assert.equal(model.capabilities.effort.ultra.supported, true);
+  assert.equal(model.capabilities.effort.ultracode.supported, true);
+
+  const effortKeys = Object.keys(model.capabilities.effort);
+  assert.ok(effortKeys.includes("ultracode"), "ultracode must be advertised to the desktop picker");
+  assert.ok(
+    effortKeys.indexOf("ultracode") > effortKeys.indexOf("ultra") &&
+      effortKeys.indexOf("ultracode") > effortKeys.indexOf("max"),
+    "ultracode must sit above the ultra/max tiers in the advertised effort set"
+  );
 });
 
 test("Claude CLI bootstrap honors configured provider metadata over defaults", () => {
@@ -551,6 +562,63 @@ test("Claude CLI bootstrap honors configured provider metadata over defaults", (
   assert.equal(option.capabilities.effort.medium.supported, false);
   assert.equal(option.capabilities.effort.high.supported, true);
   assert.equal(option.capabilities.effort.ultra.supported, false);
+  assert.equal(option.capabilities.effort.ultracode.supported, false);
+});
+
+test("Claude App discovery offers ultracode above ultra and forwards it upstream untouched", () => {
+  const config = createConfig({
+    providers: [
+      {
+        modelMetadata: {
+          "gpt-5.6-sol": {
+            contextWindow: 1_050_000,
+            supportedReasoningLevels: [
+              { description: "Medium", effort: "medium" },
+              { description: "Max", effort: "max" },
+              { description: "Ultra", effort: "ultra" },
+              { description: "Ultracode", effort: "ultracode" }
+            ],
+            supportsReasoningSummaries: true
+          }
+        },
+        models: ["gpt-5.6-sol"],
+        name: "OpenAI",
+        type: "openai_responses"
+      }
+    ]
+  });
+  const route = buildClaudeAppGatewayModelRoutes(config)[0];
+  const model = createClaudeModelsResponse(config).data.find((item) => item.id === route.id);
+
+  assert.ok(model);
+  assert.equal(model.capabilities.effort.medium.supported, true);
+  assert.equal(model.capabilities.effort.max.supported, true);
+  assert.equal(model.capabilities.effort.ultra.supported, true);
+  assert.equal(model.capabilities.effort.ultracode.supported, true);
+
+  const option = createClaudeCliBootstrapResponse(config).additional_model_options
+    .find((item) => item.id.replace(/\[1m\]$/i, "") === route.id);
+  assert.equal(option?.capabilities?.effort?.ultracode?.supported, true);
+
+  // There is no tier-translation layer between the desktop picker and upstream:
+  // only the model field is rewritten and the chosen effort rides the body as-is.
+  const rewritten = prepareClaudeAppDiscoveredModelRequest(
+    config,
+    "POST",
+    "/v1/messages",
+    Buffer.from(JSON.stringify({
+      messages: [],
+      model: model.id,
+      output_config: { effort: "ultracode" },
+      thinking: { type: "enabled", budget_tokens: 32000 }
+    }))
+  );
+  assert.ok(rewritten);
+  assert.match(rewritten.routedModel, /^OpenAI\/gpt-5\.6-sol$/);
+  const forwarded = JSON.parse(rewritten.body.toString("utf8"));
+  assert.equal(forwarded.model, rewritten.routedModel);
+  assert.equal(forwarded.output_config.effort, "ultracode");
+  assert.equal(forwarded.thinking.budget_tokens, 32000);
 });
 
 test("Claude App discovery prefers provider context metadata over the static catalog", () => {
@@ -578,4 +646,21 @@ test("Claude App discovery prefers provider context metadata over the static cat
   assert.equal(model.max_input_tokens, 244800);
   assert.equal(model.capabilities.context_management.max_input_tokens, 244800);
   assert.equal(model.capabilities.context_window.max_input_tokens, 244800);
+});
+
+test("gateway catalog normalization admits ultracode and keeps legacy tier aliases", () => {
+  const config = modelCatalogReasoningEffortConfig({
+    aliases: ["test-model"],
+    id: "openai/test-model",
+    metadata: {
+      reasoning: { default_effort: "high", supported_efforts: ["low", "max"] },
+      reasoningOptions: [{ type: "effort", values: ["ultracode", "Ultra-Code"] }]
+    }
+  });
+
+  // `max` still collapses to xhigh (pre-existing alias), `ultra` is not a
+  // models.json metadata tier, and both ultracode spellings dedupe into one.
+  assert.deepEqual(config.efforts, ["low", "xhigh", "ultracode"]);
+  assert.equal(config.defaultEffort, "high");
+  assert.equal(config.supportsReasoning, true);
 });
