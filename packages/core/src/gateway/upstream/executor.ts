@@ -21,6 +21,7 @@ import { activeProviderCredentials, findProviderByPublicOrInternalName, findProv
 import { delay } from "@ccr/core/gateway/internal/clock";
 import {
   isStreamingRequestBody,
+  isStreamingRequestPath,
   logUpstreamRetryAttempt,
   logUpstreamRetryEnded,
   parseRetryAfterHeaderMs,
@@ -352,7 +353,8 @@ export async function fetchUpstreamWithFallback(input: FetchUpstreamWithFallback
  */
 async function runUpstreamWithWaitingRetry(input: FetchUpstreamWithFallbackInput): Promise<UpstreamFetchResult> {
   const waitingOptions: ResolvedWaitingRetryOptions = resolveWaitingRetryOptions(input.waitingRetry);
-  const streamingExpected = shouldSendBody(input.method) && isStreamingRequestBody(input.body);
+  const streamingExpected = shouldSendBody(input.method) &&
+    (isStreamingRequestBody(input.body) || isStreamingRequestPath(input.path));
   const waitingStartedAtMs = Date.now();
   let waitingStream: WaitingResponseStream | undefined;
   try {

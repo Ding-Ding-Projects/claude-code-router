@@ -3,6 +3,7 @@ import test from "node:test";
 import { fetchUpstreamWithFallback, maxRetainedFailedAttempts, mergeFallbackResponseHeaders } from "@ccr/core/gateway/upstream/executor.ts";
 import {
   WAITING_RETRY_COOLDOWN_MS,
+  isStreamingRequestPath,
   parseRetryAfterHeaderMs,
   startWaitingResponseStream,
   waitingCooldownMs,
@@ -381,6 +382,42 @@ test("a client-class failure after the stream is open surfaces as an SSE error e
     // The stream must be terminated after the error frame, and the 400 is a
     // terminal outcome, not a recorded retry failure.
     assert.deepEqual(result.failedAttempts.map((attempt) => attempt.statusCode), [429]);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("streaming detection recognizes gemini stream paths but not generateContent paths", () => {
+  assert.equal(isStreamingRequestPath("/v1beta/models/gemini-2.0-flash:streamGenerateContent"), true);
+  assert.equal(isStreamingRequestPath("/v1/models/gemini-2.0-flash:streamGenerateContent"), true);
+  assert.equal(isStreamingRequestPath("/V1Beta/Models/Gemini-2.0-Flash:StreamGenerateContent"), true);
+  assert.equal(isStreamingRequestPath("/v1beta/models/gemini-2.0-flash:generateContent"), false);
+  assert.equal(isStreamingRequestPath("/v1/messages"), false);
+  assert.equal(isStreamingRequestPath(undefined), false);
+});
+
+test("gemini streaming-by-path requests are held open with comment keep-alive frames", async () => {
+  const stub = withStubbedFetch((count) => count === 1
+    ? new Response(null, { status: 429 })
+    : new Response('data: {"candidates":[]}\n\n', {
+        headers: { "content-type": "text/event-stream" },
+        status: 200
+      }));
+  try {
+    const result = await fetchUpstreamWithFallback(baseInput({
+      body: Buffer.from(JSON.stringify({ contents: [] })),
+      path: "/v1beta/models/gemini-2.0-flash:streamGenerateContent",
+      routedModel: "gemini-2.0-flash",
+      waitingRetry: { cooldownMs: 10, keepAliveIntervalMs: 5 }
+    }));
+    assert.equal(stub.count, 2);
+    assert.equal(result.response.status, 200);
+    const clientBody = await readWholeBody(result.response);
+    // Gemini has no body.stream flag; the path alone must trigger the held-open
+    // stream, and its keep-alives are SSE comments, not anthropic pings.
+    assert.ok(clientBody.includes(": keep-alive\n\n"), JSON.stringify(clientBody));
+    assert.ok(!clientBody.includes("event: ping"), JSON.stringify(clientBody));
+    assert.ok(clientBody.trimEnd().endsWith('data: {"candidates":[]}'), JSON.stringify(clientBody));
   } finally {
     stub.restore();
   }

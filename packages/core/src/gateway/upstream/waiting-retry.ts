@@ -77,6 +77,16 @@ export function isStreamingRequestBody(body: Buffer | undefined): boolean {
   return parseJsonObjectSafe(body)?.stream === true;
 }
 
+const geminiStreamingPathPattern = /\/v1(?:beta)?\/models\/[^/]+:streamgeneratecontent$/i;
+
+/**
+ * Gemini requests stream by path suffix (:streamGenerateContent) instead of a
+ * stream:true body flag, so streaming detection has to recognize the path too.
+ */
+export function isStreamingRequestPath(path: string | undefined): boolean {
+  return Boolean(path && geminiStreamingPathPattern.test(path.trim()));
+}
+
 const anthropicWaitingKeepAliveChunk = 'event: ping\ndata: {"type":"ping"}\n\n';
 
 /**
