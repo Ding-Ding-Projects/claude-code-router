@@ -13,6 +13,7 @@ import {
   appLogoUrl, trayMascotIconUrls, arrayMove, defaultTrayWidgetVariant, isTraySingletonWidgetType, normalizeTrayWidget, normalizeTrayWidgets, Switch, Textarea, Trash2, trayWidgetVariantOptions, useAppText, useEffect, useMemo, useRef, useSensor, useSensors, useSortable, useState, validateMcpServerDraft,
   X
 } from "../shared/index";
+import { MdButton } from "@/components/md3";
 import { ModelSelector } from "./model-selector";
 
 const settingsPageContentWidthClassName = "mx-auto w-full max-w-[900px]";
@@ -198,9 +199,9 @@ function SettingsLayout({
           <div className="min-w-0">
             <DialogTitle>{copy.settings.title}</DialogTitle>
           </div>
-          <Button aria-label={copy.settings.close} onClick={onClose} size="iconSm" title={copy.settings.close} type="button" variant="ghost">
+          <MdButton aria-label={copy.settings.close} onClick={onClose} size="iconSm" title={copy.settings.close} type="button" variant="text">
             <X className="h-4 w-4" />
-          </Button>
+          </MdButton>
         </DialogHeader>
 
         <DialogBody className="flex overflow-hidden p-0 max-[640px]:flex-col">
@@ -736,13 +737,13 @@ function ToolHubSettingsPage({
                 <div className="truncate text-[12px] font-semibold text-foreground">{t("MCP servers")}</div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <Button onClick={openImportMcpJsonDialog} size="sm" type="button" variant="outline">
+                <MdButton onClick={openImportMcpJsonDialog} size="sm" type="button" variant="outlined">
                   {t("Import JSON")}
-                </Button>
-                <Button onClick={openAddMcpDialog} size="sm" type="button" variant="outline">
+                </MdButton>
+                <MdButton onClick={openAddMcpDialog} size="sm" type="button" variant="outlined">
                   <Plus className="h-4 w-4" />
                   {t("Add MCP server")}
-                </Button>
+                </MdButton>
               </div>
             </div>
             {toolHub.mcpServers.length === 0 ? (
@@ -759,12 +760,12 @@ function ToolHubSettingsPage({
                         {server.transport} · {mcpServerEndpointSummary(server)}
                       </div>
                     </div>
-                    <Button aria-label={t("Edit MCP server")} onClick={() => openEditMcpDialog(index)} size="iconSm" title={t("Edit MCP server")} type="button" variant="ghost">
+                    <MdButton aria-label={t("Edit MCP server")} onClick={() => openEditMcpDialog(index)} size="iconSm" title={t("Edit MCP server")} type="button" variant="text">
                       <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button aria-label={t("Remove MCP server")} onClick={() => removeMcpServer(index)} size="iconSm" title={t("Remove MCP server")} type="button" variant="ghost">
+                    </MdButton>
+                    <MdButton aria-label={t("Remove MCP server")} onClick={() => removeMcpServer(index)} size="iconSm" title={t("Remove MCP server")} type="button" variant="text">
                       <Trash2 className="h-4 w-4" />
-                    </Button>
+                    </MdButton>
                   </div>
                 ))}
               </div>
@@ -821,9 +822,9 @@ function ToolHubMcpServerDialog({
           <div className="min-w-0">
             <DialogTitle>{mode === "add" ? t("Add MCP server") : t("Edit MCP server")}</DialogTitle>
           </div>
-          <Button aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="ghost">
+          <MdButton aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="text">
             <X className="h-4 w-4" />
-          </Button>
+          </MdButton>
         </DialogHeader>
         <DialogBody>
           <div className="grid grid-cols-1 gap-3">
@@ -903,13 +904,13 @@ function ToolHubMcpServerDialog({
           </div>
         </DialogBody>
         <DialogFooter>
-          <Button onClick={onClose} type="button" variant="outline">
+          <MdButton onClick={onClose} type="button" size="sm" variant="outlined">
             {t("Cancel")}
-          </Button>
-          <Button onClick={onSubmit} type="button">
+          </MdButton>
+          <MdButton onClick={onSubmit} type="button" size="sm" variant="filled">
             <Plus className="h-4 w-4" />
             {mode === "add" ? t("Add") : t("Save")}
-          </Button>
+          </MdButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -940,9 +941,9 @@ function ToolHubMcpJsonDialog({
           <div className="min-w-0">
             <DialogTitle>{t("Import MCP JSON")}</DialogTitle>
           </div>
-          <Button aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="ghost">
+          <MdButton aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="text">
             <X className="h-4 w-4" />
-          </Button>
+          </MdButton>
         </DialogHeader>
         <DialogBody>
           <div className="grid grid-cols-1 gap-3">
@@ -969,12 +970,12 @@ function ToolHubMcpJsonDialog({
           </div>
         </DialogBody>
         <DialogFooter>
-          <Button onClick={onClose} type="button" variant="outline">
+          <MdButton onClick={onClose} type="button" size="sm" variant="outlined">
             {t("Cancel")}
-          </Button>
-          <Button onClick={onSubmit} type="button">
+          </MdButton>
+          <MdButton onClick={onSubmit} type="button" size="sm" variant="filled">
             {t("Import")}
-          </Button>
+          </MdButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1173,10 +1174,10 @@ function DataSettingsSection({
               {t("Export current configuration and SQLite data into a single JSON backup file. The export contains API keys and should be stored securely.")}
             </div>
           </div>
-          <Button disabled={exporting} onClick={exportData} size="sm" type="button">
+          <MdButton disabled={exporting} onClick={exportData} size="sm" type="button" variant="filled">
             {exporting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
             {exporting ? t("Exporting") : t("Export")}
-          </Button>
+          </MdButton>
         </div>
         {exportedFile ? (
           <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
@@ -1257,9 +1258,9 @@ function BotSettingsPage({
           <h3 className="text-[15px] font-semibold text-foreground">{copy.settings.bots}</h3>
           <div className="mt-1 text-[12px] text-muted-foreground">{t("Manage bots used by agent profiles.")}</div>
         </div>
-        <Button onClick={() => setEditor({ mode: "add" })} size="sm" type="button">
+        <MdButton onClick={() => setEditor({ mode: "add" })} size="sm" type="button" variant="filled">
           {t("Add bot")}
-        </Button>
+        </MdButton>
       </div>
 
       <div className="grid gap-2">
@@ -1281,12 +1282,12 @@ function BotSettingsPage({
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <Button onClick={() => setEditor({ config, mode: "edit" })} size="sm" type="button" variant="outline">
+                <MdButton onClick={() => setEditor({ config, mode: "edit" })} size="sm" type="button" variant="outlined">
                   {t("Edit")}
-                </Button>
-                <Button onClick={() => setDeleteTarget(config)} size="sm" type="button" variant="outline">
+                </MdButton>
+                <MdButton onClick={() => setDeleteTarget(config)} size="sm" type="button" variant="outlined">
                   {t("Delete")}
-                </Button>
+                </MdButton>
               </div>
             </div>
           );
@@ -1352,9 +1353,9 @@ function DeleteBotDialog({
           <div className="min-w-0">
             <DialogTitle>{t("Delete bot")}</DialogTitle>
           </div>
-          <Button aria-label={copy.settings.close} onClick={onClose} size="iconSm" title={copy.settings.close} type="button" variant="ghost">
+          <MdButton aria-label={copy.settings.close} onClick={onClose} size="iconSm" title={copy.settings.close} type="button" variant="text">
             <X className="h-4 w-4" />
-          </Button>
+          </MdButton>
         </DialogHeader>
         <DialogBody>
           <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5">
@@ -1385,18 +1386,18 @@ function DeleteBotDialog({
         </DialogBody>
         <DialogFooter>
           {isBlocked ? (
-            <Button autoFocus onClick={onClose} type="button">
+            <MdButton autoFocus onClick={onClose} type="button" size="sm" variant="filled">
               {copy.settings.close}
-            </Button>
+            </MdButton>
           ) : (
             <>
-              <Button autoFocus onClick={onClose} type="button" variant="outline">
+              <MdButton autoFocus onClick={onClose} type="button" size="sm" variant="outlined">
                 {t("Cancel")}
-              </Button>
-              <Button onClick={onConfirm} type="button" variant="destructive">
+              </MdButton>
+              <MdButton onClick={onConfirm} type="button" size="sm" variant="error">
                 <Trash2 className="h-4 w-4" />
                 {t("Delete")}
-              </Button>
+              </MdButton>
             </>
           )}
         </DialogFooter>
@@ -1719,9 +1720,9 @@ function BotConfigDialog({
       <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{mode === "add" ? t("Add bot") : t("Edit bot")}</DialogTitle>
-          <Button aria-label={copy.settings.close} disabled={busy} onClick={onClose} size="iconSm" title={copy.settings.close} type="button" variant="ghost">
+          <MdButton aria-label={copy.settings.close} disabled={busy} onClick={onClose} size="iconSm" title={copy.settings.close} type="button" variant="text">
             <X className="h-4 w-4" />
-          </Button>
+          </MdButton>
         </DialogHeader>
         <DialogBody>
           <fieldset className="m-0 grid min-w-0 grid-cols-1 gap-3 border-0 p-0 sm:grid-cols-2" disabled={busy}>
@@ -1801,11 +1802,11 @@ function BotConfigDialog({
           ) : null}
         </DialogBody>
         <DialogFooter>
-          <Button disabled={busy} onClick={onClose} type="button" variant="outline">{t("Cancel")}</Button>
-          <Button disabled={busy} onClick={() => void save()} type="button">
+          <MdButton disabled={busy} onClick={onClose} type="button" size="sm" variant="outlined">{t("Cancel")}</MdButton>
+          <MdButton disabled={busy} onClick={() => void save()} type="button" size="sm" variant="filled">
             {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
             {t("Save")}
-          </Button>
+          </MdButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -2094,7 +2095,7 @@ function TraySettingsPage({
               </div>
             </>
           ) : (
-            <div className="min-w-[240px] flex-1 rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
+            <div className="min-w-[240px] flex-1 rounded-md border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-2 text-[12px] text-muted-foreground">
               {copy.settings.trayBalanceProgressNoData}
             </div>
           )
@@ -2225,7 +2226,7 @@ function TraySettingsPage({
               </Button>
             </div>
             ) : (
-              <div className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-8 text-center text-[12px] text-muted-foreground">
+              <div className="rounded-md border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-8 text-center text-[12px] text-muted-foreground">
                 {trayT("No widget selected")}
               </div>
             )}
