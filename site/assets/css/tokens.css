@@ -209,6 +209,7 @@
  */
 :root {
   --ccr-rainbow-marker: '@@rainbow@@';
+  --ccr-rainbow: hsl(var(--rainbow-hue, 174) 70% 42%);
   --ccr-focus-width: 2px;
   --ccr-touch-target: 48px;
   /* Published globally; settings may change it via documentElement.style. */
