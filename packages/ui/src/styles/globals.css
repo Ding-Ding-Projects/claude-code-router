@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./m3/tokens.css";
 @import "./m3/primitives.css";
+@import "./m3/legacy-bridge.css";
 @source "../pages/**/*.{html,ts,tsx}";
 @source "../components/**/*.{ts,tsx}";
 @source "../lib/**/*.{ts,tsx}";
@@ -37,6 +38,22 @@
 }
 
 @layer base {
+  /*
+   * Windows desktop shell draws native caption buttons over the app's own
+   * header through titleBarOverlay. Surfaces may reserve the caption strip
+   * with --ccr-caption-inset; where the overlay is absent (web, tray, macOS)
+   * the env() fallbacks collapse the inset to zero.
+   */
+  :root {
+    --ccr-caption-inset: 0px;
+  }
+
+  @supports (width: env(titlebar-area-width, 100vw)) {
+    :root {
+      --ccr-caption-inset: max(0px, calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw)));
+    }
+  }
+
   :root {
     color-scheme: light;
     --background: #f6f7f8;
@@ -401,6 +418,18 @@
 
   .app-sidebar-toggle {
     background: transparent;
+  }
+
+  .app-titlebar-safe-right {
+    /* Keep the header strip's content clear of native caption buttons. The
+       floors mirror the px-5 / max-[720px]:px-3 padding of the home header. */
+    padding-right: max(1.25rem, var(--ccr-caption-inset));
+  }
+
+  @media (max-width: 720px) {
+    .app-titlebar-safe-right {
+      padding-right: max(0.75rem, var(--ccr-caption-inset));
+    }
   }
 
   .shadow-card {

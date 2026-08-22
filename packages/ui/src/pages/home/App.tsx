@@ -38,6 +38,7 @@ import {
   AppDialogStack, LightToast, MainLayout, OnboardingLayout, shouldCheckForUpdateOnOpen
 } from "./components/index";
 import { hasAvailableGatewayModels } from "@ccr/core/contracts/app";
+import { applyResolvedTheme } from "@/styles/m3";
 
 type ProfileOpenDialogState = {
   busy?: "" | "cli" | "app";
@@ -300,6 +301,13 @@ function App() {
 
     root.dataset.theme = theme;
   }, [themePreference]);
+
+  // Mirror the resolved app theme onto the M3 token scheme so the Material 3
+  // variables (html[data-md-theme]) follow the same source of truth as the
+  // legacy data-theme attribute instead of an independent preference.
+  useEffect(() => {
+    applyResolvedTheme(themePreference === "system" ? systemTheme : themePreference);
+  }, [systemTheme, themePreference]);
 
   useEffect(() => {
     document.documentElement.lang = resolvedLanguage === "zh" ? "zh-CN" : "en";

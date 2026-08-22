@@ -263,7 +263,7 @@ export function MainLayout({
       <main className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div
           className={cn(
-            "app-drag relative flex h-12 shrink-0 items-center bg-background/95 px-5 max-[720px]:h-auto max-[720px]:px-3 max-[720px]:py-2",
+            "app-drag app-titlebar-safe-right relative flex h-12 shrink-0 items-center bg-background/95 px-5 max-[720px]:h-auto max-[720px]:px-3 max-[720px]:py-2",
             needsTrafficLightSafeArea && "pl-[116px] max-[720px]:pl-[116px]"
           )}
         >
