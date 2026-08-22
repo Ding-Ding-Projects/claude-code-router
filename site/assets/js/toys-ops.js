@@ -669,6 +669,8 @@ export function readSubject(subject) {
     const id = subject.slice('rule:'.length);
     return loadSchedule().rules.find((r) => r.id === id) ?? null;
   }
+  if (subject === 'schedule:all') return loadSchedule().rules.slice();
+  if (subject === 'schedule:order') return { order: loadSchedule().rules.map((r) => r.id) };
   return undefined;
 }
 
@@ -677,6 +679,7 @@ export function writeSubject(subject, value) {
     const key = subject.slice('setting:'.length);
     if (value === null || value === undefined) store.remove(key);
     else store.set(key, value);
+    syncObserver();
     return true;
   }
   if (subject.startsWith('rule:')) {
@@ -689,6 +692,29 @@ export function writeSubject(subject, value) {
     else sched.rules.push(value);
     saveSchedule(sched);
     scheduleChangedCallbacks.forEach((fn) => fn());
+    syncObserver();
+    return true;
+  }
+  if (subject === 'schedule:all') {
+    // Replay of a delete-all (or wholesale replace): value is the rules array.
+    const sched = loadSchedule();
+    sched.rules = Array.isArray(value) ? value : [];
+    saveSchedule(sched);
+    scheduleChangedCallbacks.forEach((fn) => fn());
+    syncObserver();
+    return true;
+  }
+  if (subject === 'schedule:order') {
+    const order = value && Array.isArray(value.order) ? value.order : null;
+    if (!order) return false;
+    const sched = loadSchedule();
+    const byId = new Map(sched.rules.map((r) => [r.id, r]));
+    const next = order.map((id) => byId.get(id)).filter(Boolean);
+    for (const r of sched.rules) if (!order.includes(r.id)) next.push(r); // never drop unknown rules
+    sched.rules = next;
+    saveSchedule(sched);
+    scheduleChangedCallbacks.forEach((fn) => fn());
+    syncObserver();
     return true;
   }
   return false;
@@ -1881,6 +1907,11 @@ function downloadJson(filename, text) {
  * Mutation observer: poll store state, journal every visitor-owned change.
  * ========================================================================== */
 let lastDump = null;
+/** Refresh the observer's baseline so restores we just wrote ourselves are
+ *  not recorded a second time as generic setting updates. No-op pre-boot. */
+function syncObserver() {
+  if (lastDump) lastDump = store.dumpAll();
+}
 /** Keys whose changes are journaled through richer dedicated paths, or are
  *  transient UI state — excluded from the generic observer. */
 function observedKeyExcluded(k) {
