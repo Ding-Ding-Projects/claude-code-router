@@ -6,6 +6,7 @@ import {
   useState,
   UserRound, X
 } from "../shared/index";
+import { MdButton } from "@/components/md3";
 import { AddProviderForm, ProviderConnectivityCheckDialog, providerSetupStepIds, type ProviderSetupStepId } from "./providers";
 import { AddProfileForm } from "./profiles";
 
@@ -230,7 +231,7 @@ export function OnboardingView({
               <div className="flex h-8 shrink-0 items-center">
                 {previousStep || previousProviderSetupStep ? (
                   <Button
-                    className="inline-flex h-8 items-center gap-1.5 rounded-md px-1 text-[13px] font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/25"
+                    className="md-type-label-large inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[var(--md-sys-color-on-surface-variant)] outline-none transition-colors duration-[var(--md-sys-motion-duration-short3)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,transparent)] hover:text-[var(--md-sys-color-on-surface)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--md-sys-color-primary)]"
                     onClick={goToPreviousStep}
                     type="button"
                     unstyled
@@ -244,8 +245,8 @@ export function OnboardingView({
               <div className="flex min-w-0 shrink-0 flex-col items-center gap-2 text-center">
                 <OnboardingMascotSprite activeStep={activeStep} />
                 <div className="min-w-0">
-                  <h2 className="text-[20px] font-semibold tracking-normal">{t(activeDetails.title)}</h2>
-                  <p className="mt-1 text-[12px] leading-5 text-muted-foreground">{t(activeDetails.description)}</p>
+                  <h2 className="md-type-headline-small">{t(activeDetails.title)}</h2>
+                  <p className="md-type-body-medium mt-1 text-[var(--md-sys-color-on-surface-variant)]">{t(activeDetails.description)}</p>
                 </div>
               </div>
 
@@ -300,7 +301,7 @@ export function OnboardingView({
                   aria-hidden={activeStep !== "enter"}
                   className={cn("onboarding-step-panel flex min-w-0 flex-1 flex-col gap-3", activeStep === "enter" && "onboarding-step-panel-active")}
                 >
-                  <div className="mx-auto flex w-full max-w-[520px] flex-col overflow-hidden rounded-lg border border-border bg-background/70">
+                  <div className="mx-auto flex w-full max-w-[520px] flex-col overflow-hidden rounded-[var(--md-sys-shape-corner-large)] border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] shadow-[var(--md-elevation-level1)]">
                     <OnboardingStatusRow label={t("Provider")} ready={providerReady} />
                     <OnboardingStatusRow label={t("Profile")} ready={profileReady} />
                     <OnboardingStatusRow label={t("Service")} ready={serviceReady} />
@@ -308,25 +309,25 @@ export function OnboardingView({
                   </div>
                   <div className="mt-auto flex flex-wrap items-center justify-center gap-2">
                     {!providerReady ? (
-                      <Button onClick={() => onSelectStep("provider")} type="button" variant="outline">
+                      <MdButton onClick={() => onSelectStep("provider")} size="sm" type="button" variant="outlined">
                         {t("Configure provider")}
-                      </Button>
+                      </MdButton>
                     ) : null}
                     {providerReady && !profileReady ? (
-                      <Button onClick={() => onSelectStep("profile")} type="button" variant="outline">
+                      <MdButton onClick={() => onSelectStep("profile")} size="sm" type="button" variant="outlined">
                         {t("Connect agent")}
-                      </Button>
+                      </MdButton>
                     ) : null}
                   </div>
                 </div>
               </div>
 
               <div className="mt-5 flex shrink-0 items-center justify-end gap-3 border-t border-border/60 pt-4 max-[640px]:items-stretch">
-                <Button disabled={nextDisabled} onClick={() => void goToNextStep()} type="button">
+                <MdButton disabled={nextDisabled} onClick={() => void goToNextStep()} size="sm" type="button">
                   {providerSubmitLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : activeStep === "enter" ? <Check className="h-4 w-4" /> : null}
                   {providerSubmitLoading ? t("Loading") : activeStep === "enter" ? t("Let's start") : t("Next step")}
                   {!providerSubmitLoading && activeStep !== "enter" ? <ChevronRight className="h-4 w-4" /> : null}
-                </Button>
+                </MdButton>
               </div>
             </div>
           </motion.div>
@@ -369,23 +370,23 @@ function OnboardingProgress({
 
   return (
     <div className="relative shrink-0 border-b border-border/60 bg-card/95" aria-label={`${t("Step")} ${activeIndex + 1} / ${stepCount}`}>
-      <div className="mx-auto flex h-11 max-w-[920px] items-center justify-start overflow-x-auto px-3 text-[12px] font-medium sm:justify-center">
+      <div className="md-type-label-medium mx-auto flex h-11 max-w-[920px] items-center justify-start overflow-x-auto px-3 sm:justify-center">
         {onboardingProgressItems.map((item, index) => (
           <div className="flex shrink-0 items-center" key={item.key}>
             <span
               className={cn(
                 "max-w-[128px] truncate max-[560px]:max-w-[96px]",
-                index === activeIndex ? "text-foreground" : "text-muted-foreground"
+                index === activeIndex ? "text-[var(--md-sys-color-primary)]" : "text-[var(--md-sys-color-on-surface-variant)]"
               )}
             >
               {t(item.label)}
             </span>
-            {index < stepCount - 1 ? <ChevronRight className="mx-2.5 h-4 w-4 shrink-0 text-muted-foreground/70 max-[560px]:mx-1.5" /> : null}
+            {index < stepCount - 1 ? <ChevronRight className="mx-2.5 h-4 w-4 shrink-0 text-[var(--md-sys-color-outline)] max-[560px]:mx-1.5" /> : null}
           </div>
         ))}
       </div>
-      <div className="absolute inset-x-0 bottom-0 h-[3px] bg-muted" role="progressbar" aria-valuemin={1} aria-valuemax={stepCount} aria-valuenow={activeIndex + 1}>
-        <div className="h-full bg-foreground transition-[width] duration-200" style={{ width: progressWidth }} />
+      <div className="absolute inset-x-0 bottom-0 h-[3px] bg-[var(--md-sys-color-surface-container-highest)]" role="progressbar" aria-valuemin={1} aria-valuemax={stepCount} aria-valuenow={activeIndex + 1}>
+        <div className="h-full bg-[var(--md-sys-color-primary)] transition-[width] duration-[var(--md-sys-motion-duration-short4)] ease-[var(--md-sys-motion-easing-standard)]" style={{ width: progressWidth }} />
       </div>
     </div>
   );
@@ -394,11 +395,11 @@ function OnboardingProgress({
 function OnboardingStatusRow({ label, ready }: { label: string; ready: boolean }) {
   return (
     <div className="flex min-h-11 min-w-0 items-center justify-between gap-3 border-b border-border/60 px-3 py-2.5 last:border-b-0">
-      <span className="min-w-0 truncate text-[13px] font-medium text-foreground">{label}</span>
+      <span className="md-type-body-medium min-w-0 truncate font-medium text-[var(--md-sys-color-on-surface)]">{label}</span>
       <span
         className={cn(
           "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
-          ready ? "bg-emerald-500/12 text-emerald-600" : "bg-destructive/10 text-destructive"
+          ready ? "bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]" : "bg-[var(--md-sys-color-error-container)] text-[var(--md-sys-color-on-error-container)]"
         )}
       >
         {ready ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
@@ -410,8 +411,8 @@ function OnboardingStatusRow({ label, ready }: { label: string; ready: boolean }
 function OnboardingDetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex min-h-11 min-w-0 items-center justify-between gap-3 border-b border-border/60 px-3 py-2.5 last:border-b-0">
-      <span className="min-w-0 truncate text-[13px] font-medium text-foreground">{label}</span>
-      <span className="min-w-0 max-w-[68%] truncate text-right font-mono text-[12px] text-muted-foreground" title={value}>{value}</span>
+      <span className="md-type-body-medium min-w-0 truncate font-medium text-[var(--md-sys-color-on-surface)]">{label}</span>
+      <span className="md-type-body-medium min-w-0 max-w-[68%] truncate text-right font-mono text-[var(--md-sys-color-on-surface-variant)]" title={value}>{value}</span>
     </div>
   );
 }
