@@ -106,6 +106,42 @@ jobs:
           echo "RELEASE_TAG=${tag}" >> "$GITHUB_ENV"
           echo "Release tag: ${tag} (commit ${GITHUB_SHA})"
 
+      - name: Resolve dim sum code name from public catalog (best effort, never blocks)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Every release carries a dim sum code name resolved from the public
+          # dim-sum-photos catalog, next unused dish in deterministic catalog
+          # order, whose photo is PUBLISHED as a real release asset there. No
+          # image is generated or copied into this repository; the notes link
+          # the public asset URL. Any fetch failure ships the release without a
+          # code name and says so - this step must never block publication.
+          catalog_url="https://raw.githubusercontent.com/Ding-Ding-Projects/dim-sum-photos/main/catalog/index.json"
+          if ! curl -fsSL --max-time 60 "$catalog_url" -o dim-sum-catalog.json; then
+            echo "::warning::Could not fetch the dim sum catalog index (${catalog_url}); shipping this release without a code name."
+            echo "DIM_SUM_NAME_EN=" >> "$GITHUB_ENV"
+            rm -f dim-sum-catalog.json
+            exit 0
+          fi
+          if ! gh api repos/Ding-Ding-Projects/dim-sum-photos/releases --paginate \
+              -q '.[] | .assets[] | [.name, .browser_download_url] | @tsv' > dim-sum-assets.tsv; then
+            echo "::warning::Could not list published photo assets of the public dim-sum repository; shipping this release without a code name."
+            echo "DIM_SUM_NAME_EN=" >> "$GITHUB_ENV"
+            rm -f dim-sum-catalog.json dim-sum-assets.tsv
+            exit 0
+          fi
+          # Prior release titles of THIS repository: a code name is used once.
+          gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate -q '.[].name' > dim-sum-used-titles.txt 2>/dev/null || true
+          picked="$(node scripts/pick-dim-sum.mjs dim-sum-catalog.json dim-sum-assets.tsv dim-sum-used-titles.txt || true)"
+          if [ -n "$picked" ]; then
+            printf '%s\n' "$picked" >> "$GITHUB_ENV"
+            echo "Dim sum code name resolved for this release."
+          else
+            echo "::warning::No unused published dim sum dish could be resolved; shipping this release without a code name."
+            echo "DIM_SUM_NAME_EN=" >> "$GITHUB_ENV"
+          fi
+          rm -f dim-sum-catalog.json dim-sum-assets.tsv dim-sum-used-titles.txt
+
       - name: Write release notes (timing + line count + honesty statements)
         shell: bash
         run: |
@@ -134,6 +170,19 @@ jobs:
             echo "on the task that pushed it; this release makes no local-verification claim"
             echo "either way. See the commit history for what changed."
             echo
+            echo "### Dim sum code name"
+            echo
+            if [ -n "${DIM_SUM_NAME_EN:-}" ]; then
+              echo "**${DIM_SUM_NAME_EN} · ${DIM_SUM_NAME_ZH}**"
+              echo
+              echo "Photo (published asset of the public dim-sum catalog; linked, not copied):"
+              echo "[${DIM_SUM_NAME_EN}](${DIM_SUM_PHOTO_URL})"
+            else
+              echo "None for this build: the public dim-sum catalog or its published photo assets were"
+              echo "unreachable at build time, so this release ships with its version alone rather"
+              echo "than guessing a name."
+            fi
+            echo
             echo "### Line count at this commit"
             echo
             echo "Produced by \`node scripts/count-lines.mjs\` over the tagged tree:"
@@ -148,9 +197,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          title="Claude Code Router ${RELEASE_TAG}"
+          if [ -n "${DIM_SUM_NAME_EN:-}" ] && [ -n "${DIM_SUM_NAME_ZH:-}" ]; then
+            title="Claude Code Router ${RELEASE_TAG} · ${DIM_SUM_NAME_EN} · ${DIM_SUM_NAME_ZH}"
+          fi
           gh release create "${RELEASE_TAG}" \
             --target "${GITHUB_SHA}" \
-            --title "Claude Code Router ${RELEASE_TAG}" \
+            --title "${title}" \
             --notes-file release-notes.md
 
       - name: Attach installer assets
