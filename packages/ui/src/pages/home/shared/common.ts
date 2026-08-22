@@ -2,6 +2,8 @@ import {
   DEFAULT_OVERVIEW_WIDGETS,
   DEFAULT_TRAY_COMPONENT_VARIANTS,
   DEFAULT_TRAY_WINDOW_MODULES,
+  ORGANIZATION_BANNER_IMAGE_URL_MAX_LENGTH,
+  ORGANIZATION_BANNER_TEXT_MAX_LENGTH,
   OVERVIEW_WIDGET_SIZE_VALUES,
   TRAY_SINGLETON_WIDGET_TYPES,
   TRAY_TOP_WIDGET_TYPES,
@@ -9,6 +11,7 @@ import {
 } from "@ccr/core/contracts/app";
 import type {
   AppConfig,
+  OrganizationBannerConfig,
   OverviewAccountCardSize,
   OverviewMetricKind,
   OverviewWidgetConfig,
@@ -145,6 +148,36 @@ export function normalizeTrayBalanceProgressConfig(value: unknown): TrayBalanceP
   const provider = typeof value.provider === "string" ? value.provider.trim() : "";
   const meterId = typeof value.meterId === "string" ? value.meterId.trim() : "";
   return provider && meterId ? { meterId, provider } : undefined;
+}
+
+export function normalizeOrganizationBannerConfig(value: unknown): OrganizationBannerConfig {
+  const record = isPlainRecord(value) ? value : {};
+  const text = typeof record.text === "string"
+    ? record.text.slice(0, ORGANIZATION_BANNER_TEXT_MAX_LENGTH)
+    : "";
+  // Values are kept as typed (bounded by the shared maximums) so live typing
+  // never fights the autosave round-trip; http(s) validation for the image
+  // URL happens where the value is committed and where the banner renders.
+  const rawImageUrl = typeof record.imageUrl === "string"
+    ? record.imageUrl.trim().slice(0, ORGANIZATION_BANNER_IMAGE_URL_MAX_LENGTH)
+    : "";
+  return {
+    enabled: record.enabled === true,
+    text,
+    ...(rawImageUrl ? { imageUrl: rawImageUrl } : {})
+  };
+}
+
+export function isValidOrganizationBannerImageUrl(value: string): boolean {
+  if (!/^https?:\/\//i.test(value)) {
+    return false;
+  }
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export function normalizeTrayProgressTargetTokens(value: unknown): number {

@@ -6,7 +6,7 @@ import {
 } from "./fallbacks";
 
 import { normalizeApiKeys } from "./api-keys";
-import { normalizeOverviewWidgets, normalizeThemePreference, normalizeTrayBalanceProgressConfig, normalizeTrayComponentVariants, normalizeTrayIconPreference, normalizeTrayProgressTargetTokens, normalizeTrayWidgets, normalizeTrayWindowModules } from "./common";
+import { normalizeOrganizationBannerConfig, normalizeOverviewWidgets, normalizeThemePreference, normalizeTrayBalanceProgressConfig, normalizeTrayComponentVariants, normalizeTrayIconPreference, normalizeTrayProgressTargetTokens, normalizeTrayWidgets, normalizeTrayWindowModules } from "./common";
 import { legacyProfileItemsFromProfileConfig, normalizeBotGatewayRuntimeConfig, normalizeBotGatewaySavedConfigs, normalizeCodexConfigFormat, normalizeProfileItems } from "./profiles";
 import { normalizeRouterConfig } from "./routing";
 import { normalizeMcpServers } from "./virtual-models";
@@ -44,6 +44,7 @@ export function normalizeConfig(config: AppConfig): AppConfig {
     mediaTools: normalizeMediaToolsConfig(config.mediaTools),
     launchAtLogin: Boolean(config.launchAtLogin),
     observability: normalizeObservabilityConfig(config.observability),
+    organizationBanner: normalizeOrganizationBannerConfig(config.organizationBanner),
     proxy: normalizeProxyConfig(config.proxy),
     profile: {
       ...fallbackConfig.profile,

@@ -6,13 +6,16 @@ import {
   DialogFooter, DialogHeader, DialogTitle, endpointFromHostPort, Field, formatAppError, formatProviderAccountMeterValue, formatSystemOption, Gauge,
   Globe,
   createBotGatewayConfigDraft, createMcpServerDraft, createMcpServerDraftFromConfig, createMcpServerDraftFromUnknown, DndContext, DragEndEvent, GatewayMcpServerConfig, GatewayProviderConfig, Input, isBotGatewayConfigDraftSubmittable, KeyboardSensor, KeyRound, KeyValueRowsControl, languageDisplayName, Layers3, LoaderCircle,
-  mcpServerConfigFromDraft, mcpServerEndpointSummary, mcpServerTransportOptions, mcpStdioMessageModeOptions, McpServerDraft, normalizeBotGatewayAuthType, normalizeBotGatewayPlatform, normalizeProviderModelSelector, normalizeProxyUpstreamConfig, normalizeToolHubConfig, numberValue, Palette, Pencil, Plus, ProfileConfig, profileAgentLabel,
+  mcpServerConfigFromDraft, mcpServerEndpointSummary, mcpServerTransportOptions, mcpStdioMessageModeOptions, McpServerDraft, normalizeBotGatewayAuthType, normalizeBotGatewayPlatform, normalizeOrganizationBannerConfig, normalizeProviderModelSelector, normalizeProxyUpstreamConfig, normalizeToolHubConfig, numberValue, Palette, Pencil, Plus, ProfileConfig, profileAgentLabel,
   PanelLeftOpen, Power, ProviderAccountMeter, ProviderAccountSnapshot, ReactNode, ResolvedLanguage, ResolvedTheme, Select, SelectControl,
   PointerSensor, rectSortingStrategy, Settings, SettingsPageId, SortableContext, sortableKeyboardCoordinates, themeDisplayName,
   translateOptions, TrayBalanceProgressConfig, TrayComponentVariants, TrayWidgetConfig, TrayWidgetType, TrayWidgetVariant,
   appLogoUrl, trayMascotIconUrls, arrayMove, defaultTrayWidgetVariant, isTraySingletonWidgetType, normalizeTrayWidget, normalizeTrayWidgets, Switch, Textarea, Trash2, trayWidgetVariantOptions, useAppText, useEffect, useMemo, useRef, useSensor, useSensors, useSortable, useState, validateMcpServerDraft,
   X
 } from "../shared/index";
+import { isRenderableOrganizationBannerImage } from "@/components/banner/HomeBanner";
+import type { OrganizationBannerConfig } from "@ccr/core/contracts/app";
+import { ORGANIZATION_BANNER_IMAGE_URL_MAX_LENGTH, ORGANIZATION_BANNER_TEXT_MAX_LENGTH } from "@ccr/core/contracts/app";
 import { ModelSelector } from "./model-selector";
 
 const settingsPageContentWidthClassName = "mx-auto w-full max-w-[900px]";
@@ -374,6 +377,7 @@ function GeneralSettingsPage({
         />
       ) : null}
       <ProxySettingsSection copy={copy} onChange={onChangeProxy} proxy={proxy} />
+      <OrganizationBannerSettingsSection config={config} copy={copy} updateConfig={updateConfig} />
       <DataSettingsSection appInfo={appInfo} copy={copy} />
     </div>
   );
@@ -518,6 +522,82 @@ function ProxySettingsSection({
             </Field>
           </>
         ) : null}
+      </div>
+    </section>
+  );
+}
+
+function OrganizationBannerSettingsSection({
+  config,
+  copy,
+  updateConfig
+}: {
+  config: AppConfig;
+  copy: AppCopy;
+  updateConfig: (mutator: (config: AppConfig) => AppConfig) => void;
+}) {
+  const banner = config.organizationBanner;
+  // The image URL keeps a local draft so half-typed URLs are never wiped by
+  // the save round-trip; only valid http(s) values are committed to config.
+  const [imageUrlDraft, setImageUrlDraft] = useState(banner.imageUrl ?? "");
+  useEffect(() => {
+    setImageUrlDraft(banner.imageUrl ?? "");
+  }, [banner.imageUrl]);
+  const trimmedImageUrl = imageUrlDraft.trim();
+  const imageUrlValid = !trimmedImageUrl || isRenderableOrganizationBannerImage(trimmedImageUrl);
+
+  const patchBanner = (patch: Partial<OrganizationBannerConfig>) => {
+    updateConfig((next) => ({
+      ...next,
+      organizationBanner: normalizeOrganizationBannerConfig({
+        ...next.organizationBanner,
+        ...patch
+      })
+    }));
+  };
+  const commitImageUrl = () => {
+    patchBanner({ imageUrl: imageUrlValid ? trimmedImageUrl || undefined : banner.imageUrl });
+    if (!imageUrlValid) {
+      setImageUrlDraft(banner.imageUrl ?? "");
+    }
+  };
+
+  return (
+    <section className="grid grid-cols-1 gap-3">
+      <SettingsSwitchRow
+        checked={banner.enabled}
+        description={copy.settings.organizationBannerDescription}
+        icon={Globe}
+        label={copy.settings.organizationBanner}
+        onChange={(enabled) => patchBanner({ enabled })}
+      />
+      <div className="grid grid-cols-1 gap-3 rounded-md border border-border/70 bg-card/70 p-3">
+        <Field label={`${copy.settings.organizationBannerText} (${ORGANIZATION_BANNER_TEXT_MAX_LENGTH})`}>
+          <Input
+            maxLength={ORGANIZATION_BANNER_TEXT_MAX_LENGTH}
+            onChange={(event) => patchBanner({ text: event.target.value })}
+            placeholder={copy.settings.organizationBanner}
+            value={banner.text}
+          />
+        </Field>
+        <Field label={copy.settings.organizationBannerImageUrl} requirement="optional">
+          <Input
+            aria-invalid={!imageUrlValid}
+            autoComplete="off"
+            inputMode="url"
+            maxLength={ORGANIZATION_BANNER_IMAGE_URL_MAX_LENGTH}
+            onBlur={commitImageUrl}
+            onChange={(event) => setImageUrlDraft(event.target.value)}
+            placeholder="https://example.com/logo.png"
+            value={imageUrlDraft}
+          />
+          <span className={cn(
+            "text-[11px] leading-4",
+            imageUrlValid ? "text-muted-foreground" : "text-destructive"
+          )}>
+            {!imageUrlValid ? copy.settings.organizationBannerImageUrlInvalid : copy.settings.organizationBannerImageUrlHint}
+          </span>
+        </Field>
       </div>
     </section>
   );

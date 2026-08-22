@@ -124,6 +124,10 @@ export function createDefaultAppConfig(options: DefaultAppConfigOptions = {}): A
       requestLogSuccessSampleRate: 1,
       requestLogs: false
     },
+    organizationBanner: {
+      enabled: false,
+      text: ""
+    },
     preferredProvider: "",
     plugins: [],
     profile: {

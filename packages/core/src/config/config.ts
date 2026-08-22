@@ -13,7 +13,7 @@ import { LEGACY_ACTIVE_CONFIG_FILE, LEGACY_CONFIG_FILE, LEGACY_WINDOWS_CONFIG_FI
 import { normalizeCodexProviderAccountConfig } from "@ccr/core/agents/local-providers/codex";
 import { normalizeGrokProviderAccountConfig, normalizeGrokProviderMediaCapabilities } from "@ccr/core/agents/local-providers/grok";
 import { removeOpenCodeProviderAccountConfig } from "@ccr/core/agents/local-providers/opencode";
-import { CLAUDE_CODE_DEFAULT_ENV, CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY_ENV, CLAUDE_DESIGN_PLUGIN_ID, CLAUDE_SHIP_PLUGIN_ID, DEFAULT_TRAY_COMPONENT_VARIANTS, GATEWAY_PLUGIN_PERMISSION_IDS, GATEWAY_PLUGIN_SURFACE_IDS, OVERVIEW_WIDGET_SIZE_VALUES, ROUTER_FALLBACK_MAX_RETRY_COUNT, ROUTER_SCRIPT_API_VERSION, ROUTER_SCRIPT_DEFAULT_TIMEOUT_MS, ROUTER_SCRIPT_MAX_TIMEOUT_MS, TRAY_SINGLETON_WIDGET_TYPES, TRAY_TOP_WIDGET_TYPES, TRAY_WINDOW_MODULE_IDS, enforceSingleEnabledGlobalProfilePerAgent, isEnabledGlobalProfile, knownGatewayPluginDefaultApps, knownGatewayPluginDefaultPermissions, knownGatewayPluginDefaultSurfaces } from "@ccr/core/contracts/app";
+import { CLAUDE_CODE_DEFAULT_ENV, CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY_ENV, CLAUDE_DESIGN_PLUGIN_ID, CLAUDE_SHIP_PLUGIN_ID, DEFAULT_TRAY_COMPONENT_VARIANTS, GATEWAY_PLUGIN_PERMISSION_IDS, GATEWAY_PLUGIN_SURFACE_IDS, ORGANIZATION_BANNER_IMAGE_URL_MAX_LENGTH, ORGANIZATION_BANNER_TEXT_MAX_LENGTH, OVERVIEW_WIDGET_SIZE_VALUES, ROUTER_FALLBACK_MAX_RETRY_COUNT, ROUTER_SCRIPT_API_VERSION, ROUTER_SCRIPT_DEFAULT_TIMEOUT_MS, ROUTER_SCRIPT_MAX_TIMEOUT_MS, TRAY_SINGLETON_WIDGET_TYPES, TRAY_TOP_WIDGET_TYPES, TRAY_WINDOW_MODULE_IDS, enforceSingleEnabledGlobalProfilePerAgent, isEnabledGlobalProfile, knownGatewayPluginDefaultApps, knownGatewayPluginDefaultPermissions, knownGatewayPluginDefaultSurfaces } from "@ccr/core/contracts/app";
 import { createDefaultAppConfig } from "@ccr/core/config/default-config";
 import { maxRequestLogBodyBytes } from "@ccr/core/observability/request-log-limits";
 import { findProviderPresetByBaseUrl, primaryProviderPresetEndpoint, providerApiKeySafetyIssue, providerEndpointCanReceiveProviderApiKey } from "@ccr/core/providers/presets/index";
@@ -40,6 +40,7 @@ import type {
   GatewayProviderConfig,
   MediaToolsConfig,
   ObservabilityConfig,
+  OrganizationBannerConfig,
   OverviewAccountCardSize,
   OverviewMetricKind,
   OverviewWidgetConfig,
@@ -904,6 +905,10 @@ function pickConfig(value: Partial<AppConfig>): LoadedAppConfig {
   if (overviewWidgets !== undefined) {
     config.overviewWidgets = overviewWidgets;
   }
+  const organizationBanner = parseOrganizationBanner((value as Record<string, unknown>).organizationBanner);
+  if (organizationBanner) {
+    config.organizationBanner = organizationBanner;
+  }
 
   return config;
 }
@@ -1259,6 +1264,43 @@ function parseTrayBalanceProgress(value: unknown): TrayBalanceProgressConfig | u
   const provider = readString(value.provider);
   const meterId = readString(value.meterId);
   return provider && meterId ? { meterId, provider } : undefined;
+}
+
+function parseOrganizationBanner(value: unknown): OrganizationBannerConfig | undefined {
+  if (!isObject(value)) {
+    return undefined;
+  }
+  const text = typeof value.text === "string"
+    ? value.text.trim().slice(0, ORGANIZATION_BANNER_TEXT_MAX_LENGTH)
+    : "";
+  const rawImageUrl = typeof value.imageUrl === "string" ? value.imageUrl.trim() : "";
+  // A URL that is not http(s) or exceeds the bound is dropped rather than
+  // truncated: a clipped URL would render as a broken image with no way to
+  // see why. The settings input enforces the same bound while typing.
+  const imageUrl = isHttpOrHttpsUrl(rawImageUrl) && rawImageUrl.length <= ORGANIZATION_BANNER_IMAGE_URL_MAX_LENGTH
+    ? rawImageUrl
+    : undefined;
+  return {
+    enabled: value.enabled === true,
+    text,
+    ...(imageUrl ? { imageUrl } : {})
+  };
+}
+
+export function organizationBannerConfigFromRawForTest(value: unknown): OrganizationBannerConfig | undefined {
+  return parseOrganizationBanner(value);
+}
+
+function isHttpOrHttpsUrl(value: string): boolean {
+  if (!/^https?:\/\//i.test(value)) {
+    return false;
+  }
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function parseTrayWindowModules(value: unknown): TrayWindowModuleId[] | undefined {
