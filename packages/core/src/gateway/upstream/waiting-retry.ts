@@ -94,6 +94,42 @@ export function waitingStreamContentType(): string {
 }
 
 /**
+ * Terminal SSE frame for a failure that can no longer change the response
+ * status because the held-open stream already committed the client to a 200
+ * text/event-stream response. Uses this repo's own SSE error shape (an
+ * `event: error` frame carrying a JSON data payload) so createSseErrorDetector
+ * and every EventSource client recognize it. A JSON upstream body is forwarded
+ * verbatim so the client still sees the provider's real error object.
+ */
+export function waitingStreamErrorChunk(input: {
+  message: string;
+  protocol?: GatewayProviderProtocol;
+  upstreamBodyText?: string;
+}): string {
+  const payload = parseJsonObjectPayload(input.upstreamBodyText) ?? (
+    input.protocol === "anthropic_messages"
+      ? { error: { message: input.message, type: "api_error" }, type: "error" }
+      : { error: { code: "upstream_unavailable", message: input.message } }
+  );
+  return `event: error\ndata: ${JSON.stringify(payload)}\n\n`;
+}
+
+function parseJsonObjectPayload(text: string | undefined): Record<string, unknown> | undefined {
+  const trimmed = text?.trim();
+  if (!trimmed || trimmed.length > 1_048_576) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Holds a streaming client connection open while upstream retries run in the
  * background: emits keep-alive frames on an interval, adopts the eventual
  * successful upstream body into the same stream, and cleans up its timer and
@@ -104,6 +140,8 @@ export type WaitingResponseStream = {
   readonly response: Response;
   /** Pumps a successful upstream response body into the held-open stream. */
   adopt(upstreamResponse: Response): Promise<void>;
+  /** Writes one terminal SSE error frame and closes the held-open stream. */
+  failWith(errorChunk: string): void;
   /** Stops keep-alives, detaches the abort listener, and closes the stream. */
   dispose(): void;
 };
@@ -229,6 +267,11 @@ export function startWaitingResponseStream(input: {
         // stream error path a direct pipe would have used.
         failController(error instanceof Error ? error : new Error(String(error)));
       }
+    },
+    failWith(errorChunk: string): void {
+      stopKeepAlive();
+      enqueue(encoder.encode(errorChunk));
+      closeController();
     },
     dispose
   };

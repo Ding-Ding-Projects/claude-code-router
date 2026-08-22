@@ -28,6 +28,7 @@ import {
   upstreamWaitingTimeoutResponse,
   waitingCooldownMs,
   waitingKeepAliveChunk,
+  waitingStreamErrorChunk,
   startWaitingResponseStream,
   type ResolvedWaitingRetryOptions,
   type WaitingResponseStream,
@@ -427,6 +428,23 @@ async function runUpstreamWithWaitingRetry(input: FetchUpstreamWithFallbackInput
         if (!waitingStream) {
           return outcome.result;
         }
+        if (outcome.kind === "passthrough") {
+          // The held-open stream already committed the client to a 200
+          // text/event-stream response, so a permanent client-class failure can
+          // no longer change the status. Report it through that stream with this
+          // repo's SSE error shape instead of adopting it as though it were a
+          // successful body.
+          waitingStream.failWith(waitingStreamErrorChunk({
+            message: `Upstream provider rejected the request with status ${outcome.result.response.status}.`,
+            protocol: requestProtocolForPath(input.path),
+            upstreamBodyText: await readTerminalResponseBodyText(outcome.result.response)
+          }));
+          return {
+            attempt: outcome.result.attempt,
+            failedAttempts: outcome.result.failedAttempts,
+            response: waitingStream.response
+          };
+        }
         await waitingStream.adopt(outcome.result.response);
         return {
           attempt: outcome.result.attempt,
@@ -493,6 +511,17 @@ async function runUpstreamWithWaitingRetry(input: FetchUpstreamWithFallbackInput
     }
   } finally {
     waitingStream?.dispose();
+  }
+}
+
+
+/** Reads a terminal upstream error body so its JSON can surface to the client. */
+async function readTerminalResponseBodyText(response: Response): Promise<string | undefined> {
+  try {
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return buffer.subarray(0, 1_048_576).toString("utf8");
+  } catch {
+    return undefined;
   }
 }
 

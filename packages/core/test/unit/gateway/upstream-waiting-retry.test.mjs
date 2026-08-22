@@ -271,3 +271,34 @@ test("permanent client-class failures still pass through immediately and unchang
     stub.restore();
   }
 });
+
+test("a client-class failure after the stream is open surfaces as an SSE error event, not an adopted body", async () => {
+  const stub = withStubbedFetch((count) => count === 1
+    ? new Response('{"error":{"type":"overloaded_error"}}', {
+        headers: { "content-type": "application/json" },
+        status: 429
+      })
+    : new Response('{"error":{"type":"invalid_request_error","message":"model not allowed"}}', {
+        headers: { "content-type": "application/json" },
+        status: 400
+      }));
+  try {
+    const result = await fetchUpstreamWithFallback(baseInput({
+      body: Buffer.from(JSON.stringify({ messages: [], model: "test-model", stream: true })),
+      waitingRetry: { cooldownMs: 10 }
+    }));
+    assert.equal(stub.count, 2, "the 400 must end the loop instead of being adopted as a success");
+    assert.equal(result.response.status, 200, "the held-open stream already committed to a 200 SSE response");
+    assert.ok(result.response.headers.get("content-type").includes("text/event-stream"));
+    const clientBody = await readWholeBody(result.response);
+    assert.ok(clientBody.includes("event: error"), `expected an SSE error frame in ${JSON.stringify(clientBody)}`);
+    // The provider's real error object reaches the client verbatim.
+    assert.ok(clientBody.includes('"invalid_request_error"'), JSON.stringify(clientBody));
+    assert.ok(clientBody.includes('"model not allowed"'), JSON.stringify(clientBody));
+    // The stream must be terminated after the error frame, and the 400 is a
+    // terminal outcome, not a recorded retry failure.
+    assert.deepEqual(result.failedAttempts.map((attempt) => attempt.statusCode), [429]);
+  } finally {
+    stub.restore();
+  }
+});
