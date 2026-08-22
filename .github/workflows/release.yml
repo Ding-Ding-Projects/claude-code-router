@@ -129,8 +129,10 @@ jobs:
             echo "or SmartScreen warning; no signature verification is claimed."
             echo
             echo "This release is ungated by design: no tests, lint, or type checks ran in"
-            echo "this workflow. Verification happened locally in the task that changed the"
-            echo "code; see the commit history."
+            echo "this workflow, and nothing gates this release on code-quality verdicts."
+            echo "Whether the change behind this commit was verified locally depends entirely"
+            echo "on the task that pushed it; this release makes no local-verification claim"
+            echo "either way. See the commit history for what changed."
             echo
             echo "### Line count at this commit"
             echo
