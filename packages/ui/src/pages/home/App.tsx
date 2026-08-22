@@ -38,6 +38,7 @@ import {
   AppDialogStack, LightToast, MainLayout, OnboardingLayout, shouldCheckForUpdateOnOpen
 } from "./components/index";
 import { hasAvailableGatewayModels } from "@ccr/core/contracts/app";
+import { useM3Theme } from "@/styles/m3";
 
 type ProfileOpenDialogState = {
   busy?: "" | "cli" | "app";
@@ -300,6 +301,20 @@ function App() {
 
     root.dataset.theme = theme;
   }, [themePreference]);
+
+  // config.theme is the single source of truth for theming: mirror it into the
+  // Material 3 token provider so md3-styled surfaces (the organization banner)
+  // resolve the same scheme as the rest of the app instead of following their
+  // own localStorage choice. Gated on configLoaded so the provider's cached
+  // preference survives first paint until the authoritative value arrives.
+  const { setPreference: setM3ThemePreference } = useM3Theme();
+
+  useEffect(() => {
+    if (!configLoaded) {
+      return;
+    }
+    setM3ThemePreference(themePreference);
+  }, [configLoaded, setM3ThemePreference, themePreference]);
 
   useEffect(() => {
     document.documentElement.lang = resolvedLanguage === "zh" ? "zh-CN" : "en";
