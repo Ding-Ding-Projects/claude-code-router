@@ -158,7 +158,7 @@ export function TrayApp() {
 
         {loading ? <div className="mt-1.5 text-[11px] font-medium text-slate-300/55">{t("Syncing usage...")}</div> : null}
 
-        {error ? <div className="mt-3 rounded-[12px] border border-rose-400/20 bg-rose-500/15 px-3 py-2 text-[12px] font-medium text-rose-100">{error}</div> : null}
+        {error ? <div className="tray-error-banner mt-3 px-3 py-2 text-[12px] font-medium">{error}</div> : null}
 
         {!hasAnyVisibleModule && !error ? (
           <div className="tray-panel-subtle flex min-h-[260px] items-center justify-center px-4 text-center text-[12px] font-medium text-slate-400">
