@@ -537,6 +537,13 @@ function OrganizationBannerSettingsSection({
   updateConfig: (mutator: (config: AppConfig) => AppConfig) => void;
 }) {
   const banner = config.organizationBanner;
+  // The text keeps a local draft so live typing is never clobbered or
+  // re-trimmed under the cursor by the save round-trip (the backend trims the
+  // persisted value); it commits trimmed on blur so config and store agree.
+  const [textDraft, setTextDraft] = useState(banner.text);
+  useEffect(() => {
+    setTextDraft(banner.text);
+  }, [banner.text]);
   // The image URL keeps a local draft so half-typed URLs are never wiped by
   // the save round-trip; only valid http(s) values are committed to config.
   const [imageUrlDraft, setImageUrlDraft] = useState(banner.imageUrl ?? "");
@@ -554,6 +561,9 @@ function OrganizationBannerSettingsSection({
         ...patch
       })
     }));
+  };
+  const commitText = () => {
+    patchBanner({ text: textDraft.trim() });
   };
   const commitImageUrl = () => {
     patchBanner({ imageUrl: imageUrlValid ? trimmedImageUrl || undefined : banner.imageUrl });
@@ -575,9 +585,10 @@ function OrganizationBannerSettingsSection({
         <Field label={`${copy.settings.organizationBannerText} (${ORGANIZATION_BANNER_TEXT_MAX_LENGTH})`}>
           <Input
             maxLength={ORGANIZATION_BANNER_TEXT_MAX_LENGTH}
-            onChange={(event) => patchBanner({ text: event.target.value })}
+            onBlur={commitText}
+            onChange={(event) => setTextDraft(event.target.value)}
             placeholder={copy.settings.organizationBanner}
-            value={banner.text}
+            value={textDraft}
           />
         </Field>
         <Field label={copy.settings.organizationBannerImageUrl} requirement="optional">
