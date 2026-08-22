@@ -8,6 +8,7 @@
   ],
   "electronLanguages": ["en-US", "zh-CN", "zh-TW", "zh_CN", "zh_TW"],
   "npmRebuild": true,
+  "forceCodeSigning": false,
   "publish": [
     {
       "provider": "github",
@@ -57,9 +58,17 @@
       {
         "target": "nsis",
         "arch": ["x64"]
+      },
+      {
+        "target": "squirrel",
+        "arch": ["x64"]
       }
     ],
     "artifactName": "Claude-Code-Router_${version}.${ext}"
+  },
+  "squirrelWindows": {
+    "iconUrl": "https://raw.githubusercontent.com/musistudio/claude-code-router/main/build/icon.png",
+    "artifactName": "Claude-Code-Router-Setup-${version}.${ext}"
   },
   "linux": {
     "executableName": "claude-code-router",
