@@ -14,7 +14,7 @@ import trayController from "./tray-controller";
 import { appUpdateService } from "./update-service";
 import { browserAutomationMcpService } from "./browser-automation-mcp";
 import { browserWebSearchMcpService } from "./electron-web-search-mcp";
-import { applyNativeThemePreference } from "./native-theme";
+import { applyNativeThemePreference, subscribeToResolvedColorScheme } from "./native-theme";
 import windowsManager from "./windows";
 import { closeRequestLogRuntime } from "@ccr/core/observability/request-log-store";
 import { stopProviderModelAutoRefreshService, syncProviderModelAutoRefreshService } from "@ccr/core/providers/model-auto-refresh";
@@ -59,6 +59,11 @@ function startPrimaryInstance(): void {
     }
     setupApplicationMenu();
     const mainWindow = windowsManager.createMainWindow();
+    // Keep native chrome in sync when the resolved scheme flips (system theme
+    // changes while the preference is "system", or an explicit switch).
+    subscribeToResolvedColorScheme(() => {
+      windowsManager.applyNativeThemeChrome();
+    });
     if (ccrLauncherPreparation?.persistentPathRequired) {
       mainWindow.once("ready-to-show", () => {
         setTimeout(() => {

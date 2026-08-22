@@ -1,10 +1,11 @@
-import { BrowserWindow, shell } from "electron";
+import { BrowserWindow, screen, shell } from "electron";
 import type {
   BotGatewayQrWindowCloseRequest,
   BotGatewayQrWindowCloseResult,
   BotGatewayQrWindowOpenRequest,
   BotGatewayQrWindowOpenResult
 } from "@ccr/core/contracts/app";
+import { boundedWindowSize, sizeLimitsWithinWorkArea } from "./window-metrics";
 
 const qrWindows = new Map<string, BrowserWindow>();
 
@@ -30,10 +31,12 @@ export async function openBotGatewayQrWindow(
     return { opened: true };
   }
 
+  const workArea = screen.getPrimaryDisplay().workArea;
+  const limits = sizeLimitsWithinWorkArea({ minHeight: 560, minWidth: 380 }, workArea);
   const window = new BrowserWindow({
-    height: 760,
-    minHeight: 560,
-    minWidth: 380,
+    height: boundedWindowSize(760, 560, workArea.height),
+    minHeight: limits.minHeight,
+    minWidth: limits.minWidth,
     show: true,
     title: request.title?.trim() || "Weixin Login",
     webPreferences: {
@@ -42,7 +45,7 @@ export async function openBotGatewayQrWindow(
       sandbox: true,
       webSecurity: true
     },
-    width: 460
+    width: boundedWindowSize(460, 380, workArea.width)
   });
 
   qrWindows.set(sessionId, window);

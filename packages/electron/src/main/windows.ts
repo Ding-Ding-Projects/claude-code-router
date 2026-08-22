@@ -4,9 +4,20 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { APP_NAME, IPC_CHANNELS } from "@ccr/core/config/constants";
 import { configureClaudeDesignWindowCdp, type ClaudeDesignWindowCdpOptions } from "./claude-design-window";
+import { m3TitleBarOverlayOptions } from "./m3-chrome";
+import { resolvedColorScheme } from "./native-theme";
+import {
+  boundedWindowSize,
+  centeredBoundsInWorkArea,
+  clampNumber,
+  sizeLimitsWithinWorkArea,
+  workAreaCoverageLimit,
+  type RequiredWindowBounds,
+  type WorkArea,
+  type WindowBounds
+} from "./window-metrics";
 
 type WindowName = "main" | string;
-type WindowBounds = { height: number; width: number; x?: number; y?: number };
 type PluginAppWindowOptions = {
   claudeDesignCdp?: ClaudeDesignWindowCdpOptions;
   id: string;
@@ -26,7 +37,6 @@ const pluginAppTrafficLightPosition = {
 };
 const mainWindowDefaultHeight = 760;
 const mainWindowDefaultWidth = 1180;
-const mainWindowMargin = 48;
 const mainWindowMinHeight = 420;
 const mainWindowMinWidth = 360;
 const pluginAppWindowDefaultHeight = 760;
@@ -56,18 +66,29 @@ class WindowsManager {
       return existing;
     }
 
-    const bounds = getMainWindowInitialBounds(this.onboardingFinished);
+    const workArea = screen.getPrimaryDisplay().workArea;
+    const limits = mainWindowSizeLimits(workArea);
+    const bounds = getMainWindowInitialBounds(this.onboardingFinished, workArea);
 
     const window = new BrowserWindow({
       ...bounds,
-      minHeight: mainWindowMinHeight,
-      minWidth: mainWindowMinWidth,
+      minHeight: limits.minHeight,
+      minWidth: limits.minWidth,
       show: false,
       title: APP_NAME,
       ...(process.platform === "darwin"
         ? {
             titleBarStyle: "hiddenInset" as const,
             trafficLightPosition: mainWindowTrafficLightPosition
+          }
+        : {}),
+      // Windows shell chrome: hide the OS title bar but keep native caption
+      // buttons painted over an M3 surface color. The renderer already draws
+      // its own drag regions (.app-drag), so no UI-package change is needed.
+      ...(process.platform === "win32"
+        ? {
+            titleBarStyle: "hidden" as const,
+            titleBarOverlay: m3TitleBarOverlayOptions(resolvedColorScheme())
           }
         : {}),
       webPreferences: {
@@ -122,9 +143,13 @@ class WindowsManager {
     const existing = this.getWindow(windowName);
     if (existing) {
       applyPluginAppMacWindowControls(existing);
-      existing.setMinimumSize(pluginAppWindowMinWidth, pluginAppWindowMinHeight);
+      const existingLimits = sizeLimitsWithinWorkArea({
+        minHeight: pluginAppWindowMinHeight,
+        minWidth: pluginAppWindowMinWidth
+      }, screen.getDisplayMatching(existing.getBounds()).workArea);
+      existing.setMinimumSize(existingLimits.minWidth, existingLimits.minHeight);
       const [width, height] = existing.getSize();
-      if (width < pluginAppWindowMinWidth || height < pluginAppWindowMinHeight) {
+      if (width < existingLimits.minWidth || height < existingLimits.minHeight) {
         existing.setBounds(getPluginAppWindowInitialBounds());
       }
       if (existing.isMinimized()) {
@@ -139,11 +164,16 @@ class WindowsManager {
       return existing;
     }
 
-    const bounds = getPluginAppWindowInitialBounds();
+    const workArea = screen.getPrimaryDisplay().workArea;
+    const limits = sizeLimitsWithinWorkArea({
+      minHeight: pluginAppWindowMinHeight,
+      minWidth: pluginAppWindowMinWidth
+    }, workArea);
+    const bounds = getPluginAppWindowInitialBounds(workArea);
     const window = new BrowserWindow({
       ...bounds,
-      minHeight: pluginAppWindowMinHeight,
-      minWidth: pluginAppWindowMinWidth,
+      minHeight: limits.minHeight,
+      minWidth: limits.minWidth,
       show: false,
       title: options.title,
       ...(process.platform === "darwin"
@@ -257,7 +287,27 @@ class WindowsManager {
     if (!window) {
       return;
     }
-    window.setBounds(getMainWindowScreenBounds());
+    window.setBounds(getMainWindowScreenBounds(screen.getDisplayMatching(window.getBounds()).workArea));
+  }
+
+  /**
+   * Repaint native Windows title bar chrome in the resolved M3 color scheme.
+   * Called on startup and whenever the resolved scheme flips (explicit
+   * preference change or a system theme change while following the system).
+   */
+  applyNativeThemeChrome(): void {
+    if (process.platform !== "win32") {
+      return;
+    }
+    const window = this.getWindow("main");
+    if (!window || typeof window.setTitleBarOverlay !== "function") {
+      return;
+    }
+    try {
+      window.setTitleBarOverlay(m3TitleBarOverlayOptions(resolvedColorScheme()));
+    } catch (error) {
+      console.warn(`[window] Failed to sync title bar overlay theme: ${formatError(error)}`);
+    }
   }
 
   getWindow(name: WindowName): BrowserWindow | undefined {
@@ -297,47 +347,51 @@ function shouldHideMainWindowOnClose(): boolean {
   return process.platform === "win32" && !appIsQuitting;
 }
 
-function fitWindowSize(preferred: number, minimum: number, available: number): number {
-  return Math.max(minimum, Math.min(preferred, available > 0 ? available : preferred));
+function mainWindowSizeLimits(workArea: WorkArea): { minHeight: number; minWidth: number } {
+  return sizeLimitsWithinWorkArea({
+    minHeight: mainWindowMinHeight,
+    minWidth: mainWindowMinWidth
+  }, workArea);
 }
 
-function getMainWindowInitialBounds(onboardingFinished: boolean): WindowBounds {
-  const { height: availableHeight, width: availableWidth } = screen.getPrimaryDisplay().workAreaSize;
-
+function getMainWindowInitialBounds(onboardingFinished: boolean, workArea: WorkArea): WindowBounds {
   if (onboardingFinished) {
-    return getMainWindowScreenBounds();
+    return getMainWindowScreenBounds(workArea);
   }
 
   return {
-    height: fitWindowSize(mainWindowDefaultHeight, mainWindowMinHeight, availableHeight - mainWindowMargin),
-    width: fitWindowSize(mainWindowDefaultWidth, mainWindowMinWidth, availableWidth - mainWindowMargin)
+    height: boundedWindowSize(mainWindowDefaultHeight, mainWindowMinHeight, workArea.height),
+    width: boundedWindowSize(mainWindowDefaultWidth, mainWindowMinWidth, workArea.width)
   };
 }
 
-function getMainWindowScreenBounds(): Required<WindowBounds> {
-  const { workArea } = screen.getPrimaryDisplay();
-
-  return {
-    height: Math.max(mainWindowMinHeight, workArea.height),
-    width: Math.max(mainWindowMinWidth, workArea.width),
-    x: workArea.x,
-    y: workArea.y
-  };
+/**
+ * Post-onboarding shell bounds: ~95% of the display's usable work area so the
+ * window always fits at 100-200% DPI scaling (taskbar, dock and multi-monitor
+ * safe), centered in that work area.
+ */
+function getMainWindowScreenBounds(workArea: WorkArea): RequiredWindowBounds {
+  const limits = mainWindowSizeLimits(workArea);
+  return centeredBoundsInWorkArea(
+    workArea,
+    Math.max(limits.minWidth, workAreaCoverageLimit(workArea.width)),
+    Math.max(limits.minHeight, workAreaCoverageLimit(workArea.height))
+  );
 }
 
-function getPluginAppWindowInitialBounds(): WindowBounds {
-  const { height: availableHeight, width: availableWidth } = screen.getPrimaryDisplay().workAreaSize;
+function getPluginAppWindowInitialBounds(workArea?: WorkArea): WindowBounds {
+  const activeWorkArea = workArea ?? screen.getPrimaryDisplay().workArea;
   return {
-    height: fitWindowSize(pluginAppWindowDefaultHeight, pluginAppWindowMinHeight, availableHeight - mainWindowMargin),
-    width: fitWindowSize(pluginAppWindowDefaultWidth, pluginAppWindowMinWidth, availableWidth - mainWindowMargin)
+    height: boundedWindowSize(pluginAppWindowDefaultHeight, pluginAppWindowMinHeight, activeWorkArea.height),
+    width: boundedWindowSize(pluginAppWindowDefaultWidth, pluginAppWindowMinWidth, activeWorkArea.width)
   };
 }
 
 function getPluginSmallWindowBounds(parentWindow: BrowserWindow): Required<WindowBounds> {
   const parentBounds = parentWindow.getBounds();
   const { workArea } = screen.getDisplayMatching(parentBounds);
-  const width = fitWindowSize(pluginSmallWindowDefaultWidth, pluginSmallWindowMinWidth, workArea.width - mainWindowMargin);
-  const height = fitWindowSize(pluginSmallWindowDefaultHeight, pluginSmallWindowMinHeight, workArea.height - mainWindowMargin);
+  const width = boundedWindowSize(pluginSmallWindowDefaultWidth, pluginSmallWindowMinWidth, workArea.width);
+  const height = boundedWindowSize(pluginSmallWindowDefaultHeight, pluginSmallWindowMinHeight, workArea.height);
   const x = clampNumber(parentBounds.x + parentBounds.width - width - 32, workArea.x + 8, workArea.x + workArea.width - width - 8);
   const y = clampNumber(parentBounds.y + 72, workArea.y + 8, workArea.y + workArea.height - height - 8);
   return { height, width, x, y };
@@ -467,10 +521,6 @@ function isSameOrigin(baseUrl: string, targetUrl: string): boolean {
   } catch {
     return false;
   }
-}
-
-function clampNumber(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(value, max));
 }
 
 function configurePluginAppDiagnostics(window: BrowserWindow, options: PluginAppWindowOptions): void {
