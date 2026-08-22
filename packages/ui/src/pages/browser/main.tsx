@@ -375,6 +375,14 @@ function normalizeImportDomain(value: string): string | undefined {
 }
 
 const style = document.createElement("style");
+/*
+ * Material Design 3 chrome. Every colour, shape, elevation, motion and type
+ * value below comes from the --md-sys-* custom properties in
+ * styles/m3/tokens.css (bundled into assets/main.css and injected into this
+ * page's HTML); the scheme follows [data-md-theme] on <html>, set by
+ * M3ThemeProvider through the shared bootstrap. Geometry - row heights,
+ * grid columns, paddings - is unchanged from the previous chrome.
+ */
 style.textContent = `
   :root {
     color-scheme: light dark;
@@ -394,8 +402,8 @@ style.textContent = `
   }
 
   body {
-    background: Canvas;
-    color: CanvasText;
+    background: var(--md-sys-color-background);
+    color: var(--md-sys-color-on-background);
   }
 
   button,
@@ -405,7 +413,7 @@ style.textContent = `
   }
 
   button {
-    color: CanvasText;
+    color: var(--md-sys-color-on-surface);
   }
 
   .browser-shell {
@@ -424,7 +432,7 @@ style.textContent = `
   .tabs-row {
     -webkit-app-region: drag;
     align-items: end;
-    background: color-mix(in srgb, CanvasText 5%, Canvas);
+    background: var(--md-sys-color-surface-container);
     display: flex;
     min-width: 0;
     padding: 5px 8px 0 0;
@@ -448,39 +456,55 @@ style.textContent = `
   .new-tab-button,
   .icon-button {
     align-items: center;
-    border: 0;
-    border-radius: 7px;
     background: transparent;
+    border: 0;
     cursor: pointer;
     display: inline-flex;
     justify-content: center;
     outline: none;
   }
 
+  /* Material 3 tab anatomy: the selected document tab rises out of the strip
+     onto the toolbar surface with top-only corner rounding. */
   .tab {
+    border-radius: var(--md-sys-shape-corner-small) var(--md-sys-shape-corner-small) 0 0;
+    color: var(--md-sys-color-on-surface-variant);
     gap: 6px;
     height: 31px;
     justify-content: flex-start;
     max-width: 210px;
     min-width: 86px;
     padding: 0 7px 0 10px;
+    transition: background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
     width: clamp(110px, 18vw, 210px);
   }
 
   .tab.active {
-    background: Canvas;
-    box-shadow: 0 -1px 4px color-mix(in srgb, CanvasText 7%, transparent);
+    background: var(--md-sys-color-surface-container-lowest);
+    box-shadow: var(--md-elevation-level1);
+    color: var(--md-sys-color-on-surface);
   }
 
   .tab:not(.active):hover,
   .new-tab-button:hover,
   .icon-button:hover:not(:disabled) {
-    background: color-mix(in srgb, CanvasText 8%, transparent);
+    background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+  }
+
+  .tab:focus-visible,
+  .new-tab-button:focus-visible,
+  .icon-button:focus-visible,
+  .handoff-button:focus-visible,
+  .chrome-import-button:focus-visible {
+    outline: 2px solid var(--md-sys-color-primary);
+    outline-offset: 1px;
   }
 
   .tab-title {
     flex: 1;
-    font-size: 12px;
+    font-size: var(--md-sys-typescale-body-small-font-size);
+    letter-spacing: var(--md-sys-typescale-body-small-letter-spacing);
+    line-height: var(--md-sys-typescale-body-small-line-height);
     min-width: 0;
     overflow: hidden;
     text-align: left;
@@ -490,7 +514,7 @@ style.textContent = `
 
   .tab-close {
     align-items: center;
-    border-radius: 50%;
+    border-radius: var(--md-sys-shape-corner-full);
     display: inline-flex;
     flex: 0 0 auto;
     height: 18px;
@@ -499,62 +523,90 @@ style.textContent = `
   }
 
   .tab-close:hover {
-    background: color-mix(in srgb, CanvasText 10%, transparent);
+    background: color-mix(in srgb, var(--md-sys-color-on-surface) 10%, transparent);
   }
 
   .new-tab-button {
+    border-radius: var(--md-sys-shape-corner-full);
     flex: 0 0 auto;
     height: 28px;
     margin-bottom: 2px;
+    transition: background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
     width: 30px;
   }
 
   .toolbar {
     -webkit-app-region: drag;
     align-items: center;
-    border-bottom: 1px solid color-mix(in srgb, CanvasText 12%, transparent);
+    background: var(--md-sys-color-surface-container-lowest);
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
     display: grid;
     gap: 4px;
     grid-template-columns: 32px 32px 32px minmax(0, 1fr) 32px;
     padding: 6px 10px;
   }
 
+  /* Material 3 icon button: round, on-surface-variant glyph, state-layer hover. */
   .icon-button {
+    border-radius: var(--md-sys-shape-corner-full);
+    color: var(--md-sys-color-on-surface-variant);
     height: 30px;
+    transition:
+      background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+      color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
     width: 30px;
   }
 
   .icon-button:disabled {
     cursor: default;
-    opacity: 0.4;
+    opacity: 0.38;
   }
 
   .icon-button.active-import {
-    background: color-mix(in srgb, #0f766e 16%, transparent);
-    color: color-mix(in srgb, #0f766e 82%, CanvasText);
+    background: color-mix(in srgb, var(--md-sys-color-primary) 14%, transparent);
+    color: var(--md-sys-color-primary);
   }
 
+  /* Material 3 search-bar-style filled field for the address bar. */
   input {
-    background: color-mix(in srgb, CanvasText 4%, Canvas);
-    border: 1px solid color-mix(in srgb, CanvasText 12%, transparent);
-    border-radius: 8px;
-    color: CanvasText;
+    background: var(--md-sys-color-surface-container-high);
+    border: 1px solid transparent;
+    border-radius: var(--md-sys-shape-corner-full);
+    color: var(--md-sys-color-on-surface);
+    font-size: var(--md-sys-typescale-body-medium-font-size);
     height: 30px;
     min-width: 0;
     outline: none;
-    padding: 0 10px;
+    padding: 0 12px;
+    transition:
+      background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+      border-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
     width: 100%;
   }
 
+  input::placeholder {
+    color: var(--md-sys-color-on-surface-variant);
+  }
+
   input:focus {
-    border-color: color-mix(in srgb, #2563eb 70%, CanvasText 30%);
+    background: var(--md-sys-color-surface-container-lowest);
+    border-color: var(--md-sys-color-primary);
+  }
+
+  input:focus-visible {
+    outline: none;
+  }
+
+  input:disabled {
+    opacity: 0.38;
   }
 
   .automation-handoff {
     -webkit-app-region: drag;
     align-items: center;
-    background: color-mix(in srgb, #f59e0b 16%, Canvas);
-    border-bottom: 1px solid color-mix(in srgb, #92400e 24%, transparent);
+    background: var(--md-sys-color-tertiary-container);
+    border-bottom: 1px solid color-mix(in srgb, var(--md-sys-color-on-tertiary-container) 14%, transparent);
+    color: var(--md-sys-color-on-tertiary-container);
     display: grid;
     gap: 10px;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -564,7 +616,6 @@ style.textContent = `
 
   .handoff-copy {
     align-items: center;
-    color: color-mix(in srgb, #78350f 76%, CanvasText);
     display: flex;
     gap: 8px;
     min-width: 0;
@@ -578,13 +629,15 @@ style.textContent = `
   }
 
   .handoff-message {
-    font-size: 13px;
-    font-weight: 700;
+    font-size: var(--md-sys-typescale-title-small-font-size);
+    font-weight: var(--md-sys-typescale-title-small-font-weight);
+    letter-spacing: var(--md-sys-typescale-title-small-letter-spacing);
+    line-height: var(--md-sys-typescale-title-small-line-height);
   }
 
   .handoff-reason {
-    color: color-mix(in srgb, CanvasText 58%, transparent);
-    font-size: 12px;
+    color: color-mix(in srgb, var(--md-sys-color-on-tertiary-container) 76%, transparent);
+    font-size: var(--md-sys-typescale-body-small-font-size);
   }
 
   .handoff-actions {
@@ -595,37 +648,50 @@ style.textContent = `
     gap: 6px;
   }
 
+  /* Material 3 buttons: filled primary and tonal secondary, fully rounded,
+     label-large type. */
   .handoff-button {
     align-items: center;
-    background: color-mix(in srgb, CanvasText 5%, Canvas);
-    border: 1px solid color-mix(in srgb, CanvasText 12%, transparent);
-    border-radius: 7px;
+    background: var(--md-sys-color-secondary-container);
+    border: 0;
+    border-radius: var(--md-sys-shape-corner-full);
+    color: var(--md-sys-color-on-secondary-container);
+    cursor: pointer;
     display: inline-flex;
+    font-size: var(--md-sys-typescale-label-large-font-size);
+    font-weight: var(--md-sys-typescale-label-large-font-weight);
     gap: 5px;
     height: 30px;
     justify-content: center;
+    letter-spacing: var(--md-sys-typescale-label-large-letter-spacing);
+    line-height: var(--md-sys-typescale-label-large-line-height);
     min-width: 0;
-    padding: 0 9px;
+    padding: 0 12px;
+    transition:
+      background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+      box-shadow var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
     white-space: nowrap;
   }
 
   .handoff-button:hover {
-    background: color-mix(in srgb, CanvasText 9%, Canvas);
+    background: color-mix(in srgb, var(--md-sys-color-on-secondary-container) 8%, var(--md-sys-color-secondary-container));
+    box-shadow: var(--md-elevation-level1);
   }
 
   .handoff-button.primary {
-    background: #166534;
-    border-color: #166534;
-    color: white;
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
   }
 
   .handoff-button.primary:hover {
-    background: #14532d;
+    background: color-mix(in srgb, var(--md-sys-color-on-primary) 8%, var(--md-sys-color-primary));
   }
 
+  /* Material 3 dialog: scrim backdrop, extra-large corners, level-3
+     elevation, surface-container-high sheet. */
   .chrome-import-backdrop {
     align-items: start;
-    background: color-mix(in srgb, Canvas 82%, transparent);
+    background: color-mix(in srgb, var(--md-sys-color-scrim) 40%, transparent);
     bottom: 0;
     display: flex;
     justify-content: center;
@@ -642,14 +708,15 @@ style.textContent = `
   }
 
   .chrome-import-dialog {
-    background: Canvas;
-    border: 1px solid color-mix(in srgb, CanvasText 14%, transparent);
-    border-radius: 8px;
-    box-shadow: 0 18px 45px color-mix(in srgb, CanvasText 12%, transparent);
+    background: var(--md-sys-color-surface-container-high);
+    border: 0;
+    border-radius: var(--md-sys-shape-corner-extra-large);
+    box-shadow: var(--md-elevation-level3);
+    color: var(--md-sys-color-on-surface);
     display: grid;
     gap: 12px;
     max-width: 520px;
-    padding: 14px;
+    padding: 18px;
     width: min(520px, 100%);
   }
 
@@ -662,8 +729,10 @@ style.textContent = `
   }
 
   .chrome-import-title {
-    font-size: 13px;
-    font-weight: 750;
+    font-size: var(--md-sys-typescale-title-small-font-size);
+    font-weight: var(--md-sys-typescale-title-small-font-weight);
+    letter-spacing: var(--md-sys-typescale-title-small-letter-spacing);
+    line-height: var(--md-sys-typescale-title-small-line-height);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -676,27 +745,39 @@ style.textContent = `
   }
 
   .chrome-import-field span {
-    color: color-mix(in srgb, CanvasText 62%, transparent);
-    font-size: 11px;
-    font-weight: 650;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: var(--md-sys-typescale-label-small-font-size);
+    font-weight: var(--md-sys-typescale-label-small-font-weight);
+    letter-spacing: var(--md-sys-typescale-label-small-letter-spacing);
+    line-height: var(--md-sys-typescale-label-small-line-height);
+  }
+
+  .chrome-import-dialog input {
+    background: var(--md-sys-color-surface-container-highest);
+    border-radius: var(--md-sys-shape-corner-small);
+    padding: 0 10px;
+  }
+
+  .chrome-import-dialog input:focus {
+    background: var(--md-sys-color-surface-container-highest);
   }
 
   .chrome-import-error,
   .chrome-import-message {
-    border-radius: 7px;
-    font-size: 12px;
+    border-radius: var(--md-sys-shape-corner-small);
+    font-size: var(--md-sys-typescale-body-small-font-size);
     line-height: 1.4;
-    padding: 8px 9px;
+    padding: 8px 10px;
   }
 
   .chrome-import-error {
-    background: color-mix(in srgb, #dc2626 9%, Canvas);
-    color: color-mix(in srgb, #b91c1c 82%, CanvasText);
+    background: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
   }
 
   .chrome-import-message {
-    background: color-mix(in srgb, #0f766e 10%, Canvas);
-    color: color-mix(in srgb, #0f766e 82%, CanvasText);
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
   }
 
   .chrome-import-actions {
@@ -707,41 +788,49 @@ style.textContent = `
     justify-content: end;
   }
 
+  /* Text button by default, filled primary for the main action. */
   .chrome-import-button {
     align-items: center;
-    background: color-mix(in srgb, CanvasText 5%, Canvas);
-    border: 1px solid color-mix(in srgb, CanvasText 13%, transparent);
-    border-radius: 7px;
+    background: transparent;
+    border: 0;
+    border-radius: var(--md-sys-shape-corner-full);
+    color: var(--md-sys-color-primary);
+    cursor: pointer;
     display: inline-flex;
-    font-size: 12px;
-    font-weight: 650;
-    height: 30px;
+    font-size: var(--md-sys-typescale-label-large-font-size);
+    font-weight: var(--md-sys-typescale-label-large-font-weight);
+    height: 32px;
     justify-content: center;
+    letter-spacing: var(--md-sys-typescale-label-large-letter-spacing);
+    line-height: var(--md-sys-typescale-label-large-line-height);
     min-width: 86px;
-    padding: 0 10px;
+    padding: 0 14px;
+    transition:
+      background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+      box-shadow var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
   }
 
   .chrome-import-button:hover:not(:disabled) {
-    background: color-mix(in srgb, CanvasText 9%, Canvas);
+    background: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent);
   }
 
   .chrome-import-button:disabled {
     cursor: default;
-    opacity: 0.54;
+    opacity: 0.38;
   }
 
   .chrome-import-button.primary {
-    background: #166534;
-    border-color: #166534;
-    color: white;
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
   }
 
   .chrome-import-button.primary:hover:not(:disabled) {
-    background: #14532d;
+    background: color-mix(in srgb, var(--md-sys-color-on-primary) 8%, var(--md-sys-color-primary));
+    box-shadow: var(--md-elevation-level1);
   }
 
   .spin {
-    animation: spin 0.9s linear infinite;
+    animation: spin var(--md-sys-motion-duration-extra-long2) var(--md-sys-motion-easing-linear) infinite;
   }
 
   @media (prefers-reduced-motion: reduce) {
