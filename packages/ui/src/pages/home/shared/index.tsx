@@ -19,5 +19,6 @@ export * from "./routing";
 export * from "./virtual-models";
 export * from "./extensions";
 export * from "./providers";
+export * from "./reasoning-levels";
 export { isGatewayProviderEnabled } from "@ccr/core/contracts/app";
 export type { OverviewAccountCardSize, RouterBuiltInAgentRuleConfig, RouterBuiltInAgentRuleId, RouterBuiltInRulesConfig } from "@ccr/core/contracts/app";

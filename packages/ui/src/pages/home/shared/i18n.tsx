@@ -1920,6 +1920,7 @@ export const appCopy: Record<ResolvedLanguage, AppCopy> = {
       "Extra high": "超高",
       "Max": "最高",
       "Ultra": "极致",
+      "Ultracode": "极致代码",
       "Select every reasoning effort supported by this model.": "请选择该模型支持的全部推理档位。",
       "Declare whether the model provides native web search.": "声明该模型是否原生提供网页搜索。",
       "Image": "图片",

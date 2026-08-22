@@ -13,7 +13,8 @@ import {
   ProviderAccountTestResult, providerBaseUrl, providerCapabilitiesSummary, ProviderCredentialDraft, ProviderDeepLinkPayload, ProviderDeepLinkRequest, providerDraftSafetyIssue, providerCredentialDraftPatchFromJson, providerHttpJsonConnectorFromDraft,
   providerBrowserConnectorFromDraft, providerBrowserCredentialsOptions,
   ProviderConnectivityCheckReport, providerCapabilityBaseUrlForProtocol, providerConnectivityApiKeyFromDraft, providerDeepLinkDisplayIcon, providerDraftHasReadyCredentialPool, providerListItemKey, providerMatchesQuery, ProviderPreset, providerPresetIconUrls, providerProbeHasSupportedProtocol,
-  providerDisplayIcon, providerGlobalBaseUrlForProbe, providerModelDisplayName, providerModelDisplayTitle, providerProtocolOptions, providerSelectableProtocolsFromProbe, providerUsageFieldPatch, ProviderUsageFieldTarget, providerUsageMethodOptions, Search, SelectControl,
+  providerDisplayIcon, providerGlobalBaseUrlForProbe, providerModelDisplayName, providerModelDisplayTitle, providerProtocolOptions, providerReasoningLevelOptions, providerSelectableProtocolsFromProbe, providerUsageFieldPatch, ProviderUsageFieldTarget, providerUsageMethodOptions, reasoningEffortsFromLevels,
+  reasoningLevelOptionsForModel, Search, SelectControl,
   RefreshCw, resolveProviderDeepLinkPreset, ShieldCheck, splitLines, Switch, Tabs, TabsList, TabsTrigger, Textarea, Toggle, translatedProviderProtocolLabel, translateOptions,
   translateProbeProtocolMessage, Trash2, uniqueProviderName, uniqueProviderProtocols, useAppErrorText, useAppText, useEffect, useLayoutEffect, useMemo,
   useRef, useState, X, isGatewayProviderEnabled, isPlainRecord
@@ -3848,15 +3849,6 @@ function ProviderConnectivityResultGroup({
   );
 }
 
-const providerReasoningLevelOptions = [
-  { description: "Low", effort: "low", label: "Low" },
-  { description: "Medium", effort: "medium", label: "Medium" },
-  { description: "High", effort: "high", label: "High" },
-  { description: "Extra high", effort: "xhigh", label: "Extra high" },
-  { description: "Max", effort: "max", label: "Max" },
-  { description: "Ultra", effort: "ultra", label: "Ultra" }
-] as const;
-
 function ProviderModelPicker({
   catalogModels,
   defaults,
@@ -4449,10 +4441,10 @@ function ModelMetadataEditor({
             modelMetadata?.supportedReasoningLevels !== undefined ||
             modelMetadata?.supportsReasoningSummaries !== undefined
           );
-          const configuredReasoningLevels = new Set(
-            (modelMetadata?.supportedReasoningLevels ?? modelDefaults?.supportedReasoningLevels ?? [])
-              .map((level) => level.effort.trim().toLowerCase())
+          const configuredReasoningLevels = reasoningEffortsFromLevels(
+            modelMetadata?.supportedReasoningLevels ?? modelDefaults?.supportedReasoningLevels
           );
+          const reasoningLevelChoices = reasoningLevelOptionsForModel(modelDefaults, modelMetadata);
           const reasoningConfigured = modelMetadata?.supportedReasoningLevels !== undefined ||
             modelMetadata?.supportsReasoningSummaries !== undefined;
           return (
@@ -4536,7 +4528,7 @@ function ModelMetadataEditor({
                       ) : null}
                     </div>
                     <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3">
-                      {providerReasoningLevelOptions.map((option) => (
+                      {reasoningLevelChoices.map((option) => (
                         <Label className="flex min-w-0 items-center gap-2 text-[11px] font-normal" key={option.effort}>
                           <Checkbox
                             checked={configuredReasoningLevels.has(option.effort)}
