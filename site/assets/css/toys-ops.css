@@ -1,0 +1,161 @@
+/*
+ * TOYS II styles — scheduled settings, version history, bulk lists,
+ * date-range calendar, diff view, progress, super-confirm flourish.
+ * Every colour/shape token comes from tokens.css (M3); nothing hard-coded.
+ */
+
+/* ---------- ops page shell ---------- */
+.ops-shell .content { max-width: 1100px; }
+.ops-panel { display: grid; gap: 12px; margin-block-end: 32px; }
+.ops-note { color: var(--md-sys-color-on-surface-variant); }
+.ops-tznote {
+  border-inline-start: 3px solid var(--md-sys-color-tertiary);
+  padding-inline-start: 10px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.ops-status { font-weight: 500; }
+.ops-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* ---------- schedule rule cards ---------- */
+.ops-rules { display: grid; gap: 8px; }
+.rule-card { display: grid; gap: 6px; padding: 14px 16px; }
+.rule-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 36px; }
+.rule-next { color: var(--md-sys-color-on-surface-variant); }
+.rule-btns { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.rule-btns .btn-del { color: var(--md-sys-color-error); }
+.tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--md-sys-shape-corner-small);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-size: 12px;
+}
+.tag--muted { background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface-variant); }
+
+/* ---------- editor ---------- */
+.ops-two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+  gap: 8px;
+}
+.ops-days { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.ops-preview {
+  border: 1px dashed var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+  padding: 8px 12px;
+  background: var(--md-sys-color-surface-container-low);
+}
+
+/* ---------- bulk list ---------- */
+.ops-bulklist { display: grid; gap: 8px; }
+.ops-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ops-toolbar .search-field { flex: 1 1 220px; min-width: 0; }
+.ops-facets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ops-counts { color: var(--md-sys-color-on-surface-variant); }
+.ops-selbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ops-pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+
+/* chunked-progress row for long bulk runs */
+.ops-progress-row { display: flex; gap: 8px; align-items: center; }
+.ops-progress {
+  flex: 1 1 160px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--md-sys-color-surface-container-highest);
+  overflow: hidden;
+}
+.ops-progress > div {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--md-sys-color-primary), var(--md-sys-color-tertiary));
+  transition: width 120ms linear;
+}
+
+/* ---------- history list rows ---------- */
+.ops-bulklist .list-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+.ops-bulklist .list-item:last-child { border-bottom: none; }
+.ops-bulklist input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--md-sys-color-primary);
+  margin-top: 2px;
+  flex: none;
+}
+.n-title { font-weight: 500; overflow-wrap: anywhere; }
+.n-time { color: var(--md-sys-color-on-surface-variant); }
+
+/* ---------- diff view ---------- */
+.ops-diff {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  max-height: 320px;
+  overflow: auto; /* wide content scrolls in its own container — never the body */
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+  padding: 8px 10px;
+  background: var(--md-sys-color-surface-container-lowest);
+}
+.diff-added { color: var(--md-sys-color-on-primary-container); background: color-mix(in srgb, var(--md-sys-color-primary-container) 55%, transparent); }
+.diff-removed { color: var(--md-sys-color-on-error-container); background: color-mix(in srgb, var(--md-sys-color-error-container) 55%, transparent); }
+.diff-changed { color: var(--md-sys-color-on-tertiary-container); background: color-mix(in srgb, var(--md-sys-color-tertiary-container) 45%, transparent); }
+.ops-detail-notes { display: grid; gap: 4px; }
+
+/* ---------- calendar / date-range popover ---------- */
+.ops-cal { width: min(92vw, 340px); display: grid; gap: 10px; z-index: 60; position: absolute; }
+.ops-cal-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ops-cal-head { display: flex; gap: 6px; align-items: center; justify-content: space-between; }
+.ops-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.ops-cal-dow {
+  text-align: center;
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 2px 0;
+}
+.ops-cal-day { justify-self: stretch; text-align: center; min-width: 0; padding-inline: 0; }
+
+/* ---------- super-confirmation flourish (component CSS lives in app.css) ---
+   A slow shimmer over the hold-progress bar while key 2 is being held.
+   Dramatic but non-blocking; disabled for reduced motion both ways. */
+.super-progress { position: relative; }
+.super-progress > div::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, #ffffff 45%, transparent) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: super-shimmer 900ms linear infinite;
+}
+@keyframes super-shimmer {
+  to { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .super-progress > div::after { animation: none; content: none; }
+}
+html[data-motion='reduced'] .super-progress > div::after { content: none; }
+
+/* ---------- responsive floor: >=320px, no sideways body scroll ---------- */
+@media (max-width: 480px) {
+  .ops-actions { flex-direction: column; align-items: stretch; }
+  .ops-actions .btn { width: 100%; }
+  .ops-cal-sides { grid-template-columns: 1fr; }
+  .rule-head { align-items: flex-start; }
+  .ops-pager { justify-content: center; }
+  .ops-two-col { grid-template-columns: 1fr; }
+}

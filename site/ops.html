@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" data-md-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scheduled &amp; history · Claude Code Router</title>
+  <!--build:base-->
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/m3.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <script type="module" src="assets/js/toys-ops.js"></script>
+</head>
+<body data-ops-page>
+  <a class="skip-link sr-only" href="#main-content">Skip to content</a>
+
+  <!--
+    ops page (TOYS II). The scheduled-settings editor and the local version
+    history panel render here in full; the same two surfaces also mount into
+    settings.html's documented #scheduled-slot / #history-slot.
+  -->
+
+  <header class="topbar" role="banner">
+    <a class="brand" href="./index.html" data-opsl-aria="brand.aria2">
+      <span class="glyph" aria-hidden="true">🛤️</span><span>Claude Code Router</span>
+    </a>
+    <div class="spacer"></div>
+    <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle theme" data-opsl-aria="theme.toggle">
+      <span class="glyph" aria-hidden="true">◐</span>
+    </button>
+    <select id="lang-select" class="select" style="width:auto" aria-label="Language"></select>
+    <button id="notify-bell" class="icon-btn" type="button" aria-haspopup="dialog">
+      <span class="glyph" aria-hidden="true">🔔</span>
+      <span class="sr-only" data-opsl="notify.centre.short">Notification centre</span>
+    </button>
+    <button id="palette-btn" class="btn btn--text" type="button" aria-keyshortcuts="Control+Shift+F">
+      <span class="glyph" aria-hidden="true">⌘</span>
+      <span data-opsl="palette.cmds">Commands</span>
+      <kbd>Ctrl+Shift+F</kbd>
+    </button>
+  </header>
+
+  <main id="main-content" class="content ops-shell" role="main" tabindex="-1">
+    <h1 class="headline-medium" data-opsl="ops.title">Scheduled settings &amp; version history</h1>
+
+    <div id="ops-tabs" class="m3-tabs scroll-x" role="tablist" aria-label="Operations sections" data-opsl-aria="ops.tabsAria">
+      <button class="m3-tab" type="button" role="tab" id="tab-scheduled" data-section="scheduled" aria-controls="pane-scheduled-host" aria-selected="true" data-opsl="sched.tab">Scheduled settings</button>
+      <button class="m3-tab" type="button" role="tab" id="tab-history" data-section="history" aria-controls="pane-history-host" aria-selected="false" tabindex="-1" data-opsl="hist.tab">Version history</button>
+      <button class="m3-tab" type="button" role="tab" id="tab-guide" data-section="guide" aria-controls="pane-guide-host" aria-selected="false" tabindex="-1" data-opsl="guide.tab">How it works</button>
+    </div>
+
+    <section class="pane" id="pane-scheduled" aria-labelledby="tab-scheduled">
+      <div id="pane-scheduled-host"></div>
+    </section>
+    <section class="pane" id="pane-history" aria-labelledby="tab-history" hidden>
+      <div id="pane-history-host" tabindex="-1"></div>
+    </section>
+    <section class="pane" id="pane-guide" aria-labelledby="tab-guide" hidden>
+      <div id="pane-guide-host" tabindex="-1"></div>
+    </section>
+
+    <p class="body-small ops-note" data-opsl="ops.storageNote">
+      Everything on this page is stored only in this browser. There are no accounts, no network
+      calls and no sync — clearing this site's storage resets all of it.
+    </p>
+  </main>
+
+  <noscript>
+    <div style="padding:16px;border:2px solid var(--md-sys-color-error)">
+      The scheduled-settings and version-history surfaces need JavaScript to render their controls.
+    </div>
+  </noscript>
+
+  <div id="snackbar-region" class="snackbar-region" role="region" aria-live="polite" aria-label="Notifications"></div>
+  <div id="overlay-root"></div>
+</body>
+</html>
