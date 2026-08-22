@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { createRoot } from "react-dom/client";
+import { mountAppRoot } from "@/main";
 import { ArrowLeft, ArrowRight, Check, KeyRound, LoaderCircle, Plus, RotateCw, UserRound, X } from "lucide-react";
 import type { BuiltInBrowserState, ChromeLoginImportJob, ChromeLoginImportRequest } from "@ccr/core/contracts/app";
 
@@ -336,8 +336,7 @@ function BrowserChrome() {
   );
 }
 
-const root = createRoot(document.getElementById("root") as HTMLElement);
-root.render(<BrowserChrome />);
+mountAppRoot(<BrowserChrome />);
 
 function activeTabDomain(url: string | undefined): string {
   if (!url || url === browserHomeUrl) {
