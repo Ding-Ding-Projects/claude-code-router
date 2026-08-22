@@ -15,9 +15,24 @@ import { isRecord, stringValue } from "@ccr/core/gateway/internal/value";
 import { isLocalClaudeCodeOauthProviderPlugin, mergeAnthropicBetaValues } from "@ccr/core/providers/oauth-plugin";
 import { abortSignalMessage, formatError, omitLocalObservabilityHeaders, shouldSendBody, withCoreGatewayAuthHeader } from "@ccr/core/gateway/http/io";
 import { parseJsonObjectSafe, releaseJsonObject, serializeJsonBody, serializeJsonBodyWithModel } from "@ccr/core/gateway/http/body";
+import { classifyRouteFailure } from "@ccr/core/routing/failure-classifier";
 import { resolveGatewayPublicModelId } from "@ccr/core/gateway/features/model-discovery";
 import { activeProviderCredentials, findProviderByPublicOrInternalName, findProviderCredentialBySlug, normalizedProviderCapabilities, parseProviderCredentialInternalName, providerCapabilityForClientProtocol, providerCapabilityInternalName, providerCapabilityNameMatches, providerCredentialInternalName, providerCredentialPriority, providerCredentialRuntimeId, providerCredentialSlug, providerProtocolForClientProtocol, sanitizeHeaderValue } from "@ccr/core/providers/runtime-topology";
 import { delay } from "@ccr/core/gateway/internal/clock";
+import {
+  isStreamingRequestBody,
+  logUpstreamRetryAttempt,
+  logUpstreamRetryEnded,
+  parseRetryAfterHeaderMs,
+  resolveWaitingRetryOptions,
+  upstreamWaitingTimeoutResponse,
+  waitingCooldownMs,
+  waitingKeepAliveChunk,
+  startWaitingResponseStream,
+  type ResolvedWaitingRetryOptions,
+  type WaitingResponseStream,
+  type WaitingRetryOptions
+} from "@ccr/core/gateway/upstream/waiting-retry";
 import { retryDelayAfterNetworkError, retryDelayAfterStatus, shouldFallbackAfterStatus } from "@ccr/core/gateway/upstream/retry-policy";
 import { claudeCodeOauthBetaHeader, claudeCodeOauthRequiredBeta, UpstreamRequestError } from "@ccr/core/gateway/internal/shared";
 import type { ApiKeyLimitUsage, ProviderCredentialRoutingTarget, UpstreamAttempt, UpstreamFailedAttempt, UpstreamFetchResult } from "@ccr/core/gateway/internal/shared";
@@ -276,7 +291,7 @@ export function rewriteCapabilityResponseHeaders(headers: Headers, config: AppCo
 }
 
 
-export async function fetchUpstreamWithFallback(input: {
+export type FetchUpstreamWithFallbackInput = {
   body?: Buffer;
   config: AppConfig;
   coreAuthToken: string;
@@ -289,33 +304,77 @@ export async function fetchUpstreamWithFallback(input: {
   signal?: AbortSignal;
   trace?: RouteTraceObserver;
   upstreamUrl: string;
-}): Promise<UpstreamFetchResult> {
-  const fallbackMode = input.fallback.mode;
-  const planningHeaders = { ...input.headers };
-  const planningRouting = applyProviderCapabilityRouting({
-    body: input.body,
-    config: input.config,
-    fallback: input.fallback,
-    headers: planningHeaders,
-    path: input.path,
-    routedModel: input.routedModel
-  });
-  const attempts = buildUpstreamAttempts(
-    input.config,
-    planningRouting.fallback,
-    input.method,
-    input.path,
-    planningRouting.body,
-    planningRouting.routedModel
-  );
-  const failedAttempts: UpstreamFailedAttempt[] = [];
-  const attemptRoutingCache = new Map<string | undefined, {
-    body?: Buffer;
-    headers: Record<string, string>;
-    routedModel?: string;
-    sourceBody?: Buffer;
-    sourceRoutedModel?: string;
-  }>();
+  /** Test-only overrides for the universal waiting-retry timings. */
+  waitingRetry?: WaitingRetryOptions;
+};
+
+type UpstreamAttemptRouting = {
+  body?: Buffer;
+  headers: Record<string, string>;
+  routedModel?: string;
+  sourceBody?: Buffer;
+  sourceRoutedModel?: string;
+};
+
+type UpstreamRoundOutcome =
+  | { kind: "passthrough" | "resolved"; result: UpstreamFetchResult }
+  | {
+      attempt: UpstreamAttempt;
+      errorMessage?: string;
+      failedAttempts: UpstreamFailedAttempt[];
+      kind: "transient";
+      networkError?: unknown;
+      retryAfterHeader?: string | null;
+      statusCode?: number;
+    };
+
+type UpstreamAttemptRoundInput = FetchUpstreamWithFallbackInput & {
+  attemptNumberBase: number;
+  attempts: UpstreamAttempt[];
+  attemptRoutingCache: Map<string | undefined, UpstreamAttemptRouting>;
+  failedAttempts: UpstreamFailedAttempt[];
+  includePreparationChanges: boolean;
+};
+
+export async function fetchUpstreamWithFallback(input: FetchUpstreamWithFallbackInput): Promise<UpstreamFetchResult> {
+  return runUpstreamWithWaitingRetry(input);
+}
+
+/**
+ * Runs fallback rounds in a loop with the universal auto-retry contract: a
+ * transient failure never reaches the client. Streaming requests are held open
+ * with periodic SSE keep-alive frames while every planned upstream attempt is
+ * retried after WAITING_RETRY_COOLDOWN_MS (or a longer Retry-After) without a
+ * retry-count limit; non-streaming JSON requests stay pending for at most the
+ * configured max wait and then receive a 503. The only exit besides success is
+ * the client's abort signal.
+ */
+async function runUpstreamWithWaitingRetry(input: FetchUpstreamWithFallbackInput): Promise<UpstreamFetchResult> {
+  const waitingOptions: ResolvedWaitingRetryOptions = resolveWaitingRetryOptions(input.waitingRetry);
+  const streamingExpected = shouldSendBody(input.method) && isStreamingRequestBody(input.body);
+  const waitingStartedAtMs = Date.now();
+  let waitingStream: WaitingResponseStream | undefined;
+  try {
+    const fallbackMode = input.fallback.mode;
+    const planningHeaders = { ...input.headers };
+    const planningRouting = applyProviderCapabilityRouting({
+      body: input.body,
+      config: input.config,
+      fallback: input.fallback,
+      headers: planningHeaders,
+      path: input.path,
+      routedModel: input.routedModel
+    });
+    const attempts = buildUpstreamAttempts(
+      input.config,
+      planningRouting.fallback,
+      input.method,
+      input.path,
+      planningRouting.body,
+      planningRouting.routedModel
+    );
+    const failedAttempts: UpstreamFailedAttempt[] = [];
+    const attemptRoutingCache = new Map<string | undefined, UpstreamAttemptRouting>();
   const primaryAttempt = attempts[0];
   const parsedInputBody = parseJsonObjectSafe(input.body);
   const planningBodyCanSeedPrimary = requestProtocolForPath(input.path) === "gemini_generate_content" ||
@@ -331,28 +390,131 @@ export async function fetchUpstreamWithFallback(input: {
       sourceRoutedModel: input.routedModel
     });
   }
-  input.trace?.capture({
-    changes: [
-      routeTraceChange("routing", "/routing/fallback", input.fallback, planningRouting.fallback)
-    ].filter(isRouteTraceChange),
-    decision: { reason: `fallback:${fallbackMode}`, source: "execution-plan" },
-    kind: "decision",
-    name: "fallback.execution-plan",
-    phase: "planning",
-    target: attempts[0]?.model ? { model: attempts[0].model } : undefined
-  });
+    input.trace?.capture({
+      changes: [
+        routeTraceChange("routing", "/routing/fallback", input.fallback, planningRouting.fallback)
+      ].filter(isRouteTraceChange),
+      decision: { reason: `fallback:${fallbackMode}`, source: "execution-plan" },
+      kind: "decision",
+      name: "fallback.execution-plan",
+      phase: "planning",
+      target: attempts[0]?.model ? { model: attempts[0].model } : undefined
+    });
 
-  for (let index = 0; index < attempts.length; index += 1) {
+    for (;;) {
+      if (input.signal?.aborted) {
+        logUpstreamRetryEnded({
+          attempts: failedAttempts.length,
+          elapsedMs: Date.now() - waitingStartedAtMs,
+          mode: "client-disconnect"
+        });
+        throw new UpstreamRequestError(abortSignalMessage(input.signal), {
+          failedAttempts
+        });
+      }
+
+      const outcome = await executeUpstreamAttemptRound({
+        ...input,
+        attemptNumberBase: failedAttempts.length,
+        attempts,
+        attemptRoutingCache,
+        failedAttempts,
+        // Route-trace preparation changes belong to the very first attempt only.
+        includePreparationChanges: failedAttempts.length === 0
+      });
+
+      if (outcome.kind !== "transient") {
+        if (!waitingStream) {
+          return outcome.result;
+        }
+        await waitingStream.adopt(outcome.result.response);
+        return {
+          attempt: outcome.result.attempt,
+          failedAttempts: outcome.result.failedAttempts,
+          response: waitingStream.response
+        };
+      }
+
+      // Record every retried attempt so fallback diagnostics and credential
+      // cooldowns account for background tries too.
+      outcome.failedAttempts.push({
+        credentialChain: outcome.attempt.credentialChain,
+        credentialIds: outcome.attempt.credentialIds,
+        ...(outcome.errorMessage !== undefined ? { error: outcome.errorMessage } : {}),
+        model: outcome.attempt.model,
+        ...(outcome.statusCode !== undefined ? { statusCode: outcome.statusCode } : {})
+      });
+      const cooldownMs = waitingCooldownMs({
+        cooldownMs: waitingOptions.cooldownMs,
+        retryAfterHeader: outcome.retryAfterHeader
+      });
+      const lastFailedAttempt = outcome.failedAttempts[outcome.failedAttempts.length - 1];
+      if (lastFailedAttempt) {
+        lastFailedAttempt.delayMs = cooldownMs;
+      }
+      const retryAfterHeaderMs = parseRetryAfterHeaderMs(outcome.retryAfterHeader);
+      logUpstreamRetryAttempt({
+        attemptNumber: failedAttempts.length,
+        cooldownMs,
+        model: outcome.attempt.model ? sanitizeHeaderValue(outcome.attempt.model) : undefined,
+        reason: outcome.statusCode !== undefined ? `http:${outcome.statusCode}` : "network-error",
+        ...(retryAfterHeaderMs !== undefined && retryAfterHeaderMs > waitingOptions.cooldownMs
+          ? { retryAfterHeaderMs }
+          : {})
+      });
+
+      if (!streamingExpected) {
+        const waitedMs = Date.now() - waitingStartedAtMs;
+        if (waitedMs + cooldownMs > waitingOptions.maxNonStreamingWaitMs) {
+          logUpstreamRetryEnded({
+            attempts: failedAttempts.length,
+            elapsedMs: waitedMs,
+            mode: "non-streaming-timeout"
+          });
+          return {
+            attempt: outcome.attempt,
+            failedAttempts: outcome.failedAttempts,
+            response: upstreamWaitingTimeoutResponse({
+              attempts: failedAttempts.length + 1,
+              elapsedMs: waitedMs,
+              protocol: requestProtocolForPath(input.path)
+            })
+          };
+        }
+      } else if (!waitingStream) {
+        waitingStream = startWaitingResponseStream({
+          intervalMs: waitingOptions.keepAliveIntervalMs,
+          keepAliveChunk: () => waitingKeepAliveChunk(requestProtocolForPath(input.path)),
+          signal: input.signal
+        });
+      }
+
+      await delay(cooldownMs, input.signal);
+    }
+  } finally {
+    waitingStream?.dispose();
+  }
+}
+
+
+/**
+ * One pass over the planned fallback attempts. Terminal outcomes are reported
+ * instead of thrown so the universal waiting-retry loop can decide what the
+ * client sees; only a client abort still throws.
+ */
+async function executeUpstreamAttemptRound(input: UpstreamAttemptRoundInput): Promise<UpstreamRoundOutcome> {
+  const fallbackMode = input.fallback.mode;
+  for (let index = 0; index < input.attempts.length; index += 1) {
     if (input.signal?.aborted) {
       throw new UpstreamRequestError(abortSignalMessage(input.signal), {
-        failedAttempts
+        failedAttempts: input.failedAttempts
       });
     }
 
-    const attemptNumber = index + 1;
-    const plannedAttempt = attempts[index];
+    const attemptNumber = input.attemptNumberBase + index + 1;
+    const plannedAttempt = input.attempts[index];
     const capabilityRoutingStartedAt = Date.now();
-    let cachedAttemptRouting = attemptRoutingCache.get(plannedAttempt.model);
+    let cachedAttemptRouting = input.attemptRoutingCache.get(plannedAttempt.model);
     if (!cachedAttemptRouting) {
       const routedHeaders = { ...input.headers };
       const sourceBody = buildAttemptBody(input.body, input.path, plannedAttempt.model);
@@ -371,7 +533,7 @@ export async function fetchUpstreamWithFallback(input: {
         sourceBody,
         sourceRoutedModel: plannedAttempt.model
       };
-      attemptRoutingCache.set(plannedAttempt.model, cachedAttemptRouting);
+      input.attemptRoutingCache.set(plannedAttempt.model, cachedAttemptRouting);
     }
     const attemptHeaders = { ...cachedAttemptRouting.headers };
     const attemptSourceBody = cachedAttemptRouting.sourceBody;
@@ -410,7 +572,7 @@ export async function fetchUpstreamWithFallback(input: {
       method: input.method,
       path: input.path
     });
-    const hasNextAttempt = index < attempts.length - 1;
+    const hasNextAttempt = index < input.attempts.length - 1;
     const attemptUrl = rewriteRouteModelInUrl(input.upstreamUrl, attempt.model);
     const upstreamHeaders = {
       ...withCoreGatewayAuthHeader(
@@ -429,7 +591,7 @@ export async function fetchUpstreamWithFallback(input: {
     input.trace?.capture({
       attempt: attemptNumber,
       changes: [
-        ...(index === 0 ? input.preparationChanges ?? [] : []),
+        ...(index === 0 && input.includePreparationChanges ? input.preparationChanges ?? [] : []),
         ...(attempt.model && attempt.model !== input.routedModel
           ? [{
               ...(input.routedModel === undefined ? {} : { before: input.routedModel }),
@@ -470,7 +632,7 @@ export async function fetchUpstreamWithFallback(input: {
       });
 
       if (hasNextAttempt && shouldFallbackAfterStatus(response.status, fallbackMode)) {
-        const delayMs = retryDelayAfterStatus(response.headers, failedAttempts.length);
+        const delayMs = retryDelayAfterStatus(response.headers, input.failedAttempts.length);
         input.trace?.capture({
           attempt: attemptNumber,
           durationMs: Date.now() - attemptStartedAt,
@@ -489,7 +651,7 @@ export async function fetchUpstreamWithFallback(input: {
             ...(attemptProvider ? { provider: attemptProvider } : {})
           }
         });
-        failedAttempts.push({
+        input.failedAttempts.push({
           credentialChain: attempt.credentialChain,
           credentialIds: attempt.credentialIds,
           delayMs,
@@ -519,15 +681,31 @@ export async function fetchUpstreamWithFallback(input: {
         }
       });
 
+      if (!response.ok && classifyRouteFailure(response.status, fallbackMode).failureClass !== "client") {
+        // Transient upstream failure (rate limit, retryable, or server error)
+        // on the last planned attempt: report it to the universal
+        // waiting-retry loop instead of bubbling the failure to the client.
+        recordProviderCredentialOutcome(input.config, input.method, attempt, response.status, response.headers);
+        await drainResponseBody(response);
+        return {
+          attempt,
+          failedAttempts: input.failedAttempts,
+          kind: "transient",
+          retryAfterHeader: response.headers.get("retry-after"),
+          statusCode: response.status
+        };
+      }
+
+      // Success and permanent client-class failures keep their existing
+      // byte-for-byte behavior: the original Response is returned untouched.
       return {
-        attempt,
-        failedAttempts,
-        response
+        kind: response.ok ? "resolved" : "passthrough",
+        result: { attempt, failedAttempts: input.failedAttempts, response }
       };
     } catch (error) {
       const message = formatError(error);
       const delayMs = hasNextAttempt && !input.signal?.aborted
-        ? retryDelayAfterNetworkError(failedAttempts.length)
+        ? retryDelayAfterNetworkError(input.failedAttempts.length)
         : 0;
       input.trace?.capture({
         attempt: attemptNumber,
@@ -546,18 +724,22 @@ export async function fetchUpstreamWithFallback(input: {
           ...(attemptProvider ? { provider: attemptProvider } : {})
         }
       });
-      failedAttempts.push({
-        credentialChain: attempt.credentialChain,
-        credentialIds: attempt.credentialIds,
-        delayMs,
-        error: message,
-        model: attempt.model
-      });
+      if (hasNextAttempt || input.signal?.aborted) {
+        // Mid-plan attempts (and abort paths) record here; a terminal network
+        // failure is recorded once by the universal waiting-retry loop.
+        input.failedAttempts.push({
+          credentialChain: attempt.credentialChain,
+          credentialIds: attempt.credentialIds,
+          delayMs,
+          error: message,
+          model: attempt.model
+        });
+      }
       if (input.signal?.aborted) {
         throw new UpstreamRequestError(abortSignalMessage(input.signal), {
           attempt,
           cause: error,
-          failedAttempts
+          failedAttempts: input.failedAttempts
         });
       }
       if (hasNextAttempt) {
@@ -566,16 +748,21 @@ export async function fetchUpstreamWithFallback(input: {
         }
         continue;
       }
-      throw new UpstreamRequestError(message, {
+      // Final planned attempt failed on the network: report a transient
+      // outcome so the universal waiting-retry loop can hold the client and
+      // re-run the plan instead of bubbling the failure.
+      return {
         attempt,
-        cause: error,
-        failedAttempts
-      });
+        errorMessage: message,
+        failedAttempts: input.failedAttempts,
+        kind: "transient",
+        networkError: error
+      };
     }
   }
 
   throw new UpstreamRequestError("Gateway request failed before reaching an upstream provider.", {
-    failedAttempts
+    failedAttempts: input.failedAttempts
   });
 }
 
@@ -1155,15 +1342,29 @@ export function upstreamResponseHeaders(result: UpstreamFetchResult): Headers {
 }
 
 
+// Universal auto-retry can accumulate an unbounded number of failed attempts;
+// keep the diagnostic response headers bounded while x-ccr-fallback-attempts
+// still reports the exact total count.
+const fallbackHeaderEntryLimit = 100;
+
+
 function formatFallbackFailures(failedAttempts: UpstreamFailedAttempt[]): string {
-  return failedAttempts
-    .map((attempt) => attempt.statusCode ? String(attempt.statusCode) : attempt.error ? "network" : "failed")
-    .join(",");
+  return boundedFallbackEntries(
+    failedAttempts.map((attempt) => attempt.statusCode ? String(attempt.statusCode) : attempt.error ? "network" : "failed")
+  );
 }
 
 
 function formatFallbackDelays(failedAttempts: UpstreamFailedAttempt[]): string {
-  return failedAttempts
-    .map((attempt) => String(Math.max(0, attempt.delayMs ?? 0)))
-    .join(",");
+  return boundedFallbackEntries(
+    failedAttempts.map((attempt) => String(Math.max(0, attempt.delayMs ?? 0)))
+  );
+}
+
+
+function boundedFallbackEntries(entries: string[]): string {
+  if (entries.length <= fallbackHeaderEntryLimit) {
+    return entries.join(",");
+  }
+  return ["..."].concat(entries.slice(-fallbackHeaderEntryLimit)).join(",");
 }
