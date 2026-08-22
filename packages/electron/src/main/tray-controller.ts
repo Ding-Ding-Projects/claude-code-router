@@ -6,19 +6,20 @@ import { loadAppConfig } from "@ccr/core/config/config";
 import { APP_NAME, IPC_CHANNELS } from "@ccr/core/config/constants";
 import { getProviderAccountSnapshots } from "@ccr/core/providers/account-service";
 import { getTodayUsageTotals, onUsageRecorded } from "@ccr/core/usage/store";
+import { m3ColorSchemeForDarkColors, m3Spacing, m3SurfaceForScheme } from "./m3-chrome";
 import windowsManager from "./windows";
 import type { AppConfig, ProviderAccountMeter, TrayBalanceProgressConfig, TrayIconPreference } from "@ccr/core/contracts/app";
 
 const popoverMenuWidth = 420;
 const popoverPreferredHeight = 740;
-const popoverDetailGap = 12;
+// Spacing comes from the M3 baseline 4dp grid so tray chrome matches the
+// management UI's spacing scale.
+const popoverDetailGap = m3Spacing.md;
 const popoverDetailTopOffset = 0;
 const popoverDetailWidth = 420;
-const popoverMargin = 8;
+const popoverMargin = m3Spacing.sm;
 const trayActivationSuppressMs = 750;
 const trayMenuBarIconSize = 20;
-const trayWindowDarkBackgroundColor = "#1c1c1e";
-const trayWindowLightBackgroundColor = "#f2f2f7";
 const trayTokenFallbackTitle = "0 tokens";
 const trayIconFallbackPath = path.join(__dirname, "../assets/tray.png");
 const trayMascotIconIds = ["violet", "orange", "cyan"] as const;
@@ -519,9 +520,7 @@ function applyTrayWindowMaterial(window: BrowserWindow): void {
 }
 
 function trayWindowBackgroundColor(): string {
-  return nativeTheme.shouldUseDarkColors
-    ? trayWindowDarkBackgroundColor
-    : trayWindowLightBackgroundColor;
+  return m3SurfaceForScheme(m3ColorSchemeForDarkColors(nativeTheme.shouldUseDarkColors));
 }
 
 function trayWindowMaterialOptions(): Pick<

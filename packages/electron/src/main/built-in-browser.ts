@@ -30,6 +30,10 @@ import { IPC_CHANNELS } from "@ccr/core/contracts/ipc-channels";
 import { APP_NAME } from "@ccr/core/config/constants";
 import { pluginService } from "@ccr/core/plugins/service";
 import { chromeLoginImportService } from "./chrome-login-import";
+import {
+  boundedWindowSize,
+  sizeLimitsWithinWorkArea
+} from "./window-metrics";
 
 type BrowserTab = BuiltInBrowserTabState & {
   view: WebContentsView;
@@ -414,16 +418,15 @@ class BuiltInBrowserService {
   }
 
   private createWindow(): BrowserWindow {
-    const { height: availableHeight, width: availableWidth } = screen.getPrimaryDisplay().workAreaSize;
-    const minHeight = 560;
-    const minWidth = 820;
-    const height = fitWindowSize(840, minHeight, availableHeight - 48);
-    const width = fitWindowSize(1180, minWidth, availableWidth - 48);
+    const workArea = screen.getPrimaryDisplay().workArea;
+    const limits = sizeLimitsWithinWorkArea({ minHeight: 560, minWidth: 820 }, workArea);
+    const height = boundedWindowSize(840, 560, workArea.height);
+    const width = boundedWindowSize(1180, 820, workArea.width);
 
     const window = new BrowserWindow({
       height,
-      minHeight,
-      minWidth,
+      minHeight: limits.minHeight,
+      minWidth: limits.minWidth,
       show: false,
       title: `${APP_NAME} APPs`,
       ...(process.platform === "darwin"
@@ -929,10 +932,6 @@ class BuiltInBrowserService {
 }
 
 export const builtInBrowserService = new BuiltInBrowserService();
-
-function fitWindowSize(preferred: number, minimum: number, available: number): number {
-  return Math.max(minimum, Math.min(preferred, available > 0 ? available : preferred));
-}
 
 function isHttpUrl(value: string): boolean {
   try {
