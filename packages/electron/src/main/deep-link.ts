@@ -172,6 +172,17 @@ class DeepLinkService {
 
   private registerProtocolClient(): void {
     try {
+      if (isSquirrelLifecycleFirstRun()) {
+        // Squirrel unpacks each release into a versioned app-x.y.z folder and
+        // deletes the previous folder after launching the updated build with
+        // --squirrel-updated. A registration left behind by the old build
+        // therefore points at a removed executable, so the first run after an
+        // install or update re-registers explicitly against the CURRENT
+        // process.execPath. Behavior on every other launch is unchanged.
+        app.setAsDefaultProtocolClient(appDeepLinkProtocol, process.execPath);
+        console.info(`[deep-link] Registered ${appDeepLinkProtocol} protocol after Squirrel install/update.`);
+        return;
+      }
       if (process.defaultApp && process.argv.length >= 2) {
         app.setAsDefaultProtocolClient(appDeepLinkProtocol, process.execPath, [path.resolve(process.argv[1])]);
         return;
@@ -438,6 +449,25 @@ function createProviderDeepLinkRequest(rawUrl: string): ProviderDeepLinkRequest 
 
 function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * True when Squirrel.Windows launched this build as part of an install or an
+ * update (--squirrel-install / --squirrel-updated / --squirrel-firstrun).
+ * Squirrel deletes the previous versioned app folder after launching the new
+ * build, so these are exactly the runs where a stale protocol registration
+ * pointing at the deleted executable must be refreshed.
+ */
+function isSquirrelLifecycleFirstRun(): boolean {
+  if (process.platform !== "win32") {
+    return false;
+  }
+  const flag = process.argv[1];
+  return (
+    flag === "--squirrel-install" ||
+    flag === "--squirrel-updated" ||
+    flag === "--squirrel-firstrun"
+  );
 }
 
 export const deepLinkService = new DeepLinkService();

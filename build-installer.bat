@@ -79,6 +79,18 @@ rem environment sanity, not a test gate) + npm run build:assets +
 rem electron-builder --config build/electron-builder.local.cjs
 rem --win --publish never. Output lands in release-local\ .
 rem ============================================================
+rem ---- clean stale packaging output first: everything under release-local\
+rem must come from THIS build, or verification below can hash an old artifact.
+set "OUTDIR=%SCRIPT_DIR%release-local"
+if exist "%OUTDIR%\" (
+  echo [installer] Removing stale packaging output from a previous build: release-local\
+  rmdir /s /q "%OUTDIR%"
+  if exist "%OUTDIR%\" (
+    echo [installer] BLOCKER: could not remove stale packaging output release-local\ - close whatever holds it open.
+    goto :fail
+  )
+)
+
 echo [installer] Phase 2/3: packaging Windows Squirrel installer - npm run build:app:win:local
 call npm run build:app:win:local
 if ERRORLEVEL 1 goto :fail
@@ -94,9 +106,23 @@ if not exist "%OUTDIR%\" (
   echo [installer] BLOCKER: packaging output directory is missing: release-local\
   goto :fail
 )
+rem Exactly ONE fresh installer executable must exist: the stale-output cleanup
+rem above guarantees it, and an ambiguous count is a blocker, never a guess.
+set "SETUP_COUNT=0"
 set "SETUP="
-for %%F in ("%OUTDIR%\*Setup*.exe") do set "SETUP=%%F"
-if not defined SETUP for %%F in ("%OUTDIR%\*.exe") do set "SETUP=%%F"
+for %%F in ("%OUTDIR%\*Setup*.exe") do (
+  set /a SETUP_COUNT+=1
+  set "SETUP=%%F"
+)
+if %SETUP_COUNT% EQU 0 for %%F in ("%OUTDIR%\*.exe") do (
+  set /a SETUP_COUNT+=1
+  set "SETUP=%%F"
+)
+if %SETUP_COUNT% GTR 1 (
+  echo [installer] BLOCKER: %SETUP_COUNT% installer executables found under release-local\ - refusing to guess which one is fresh.
+  dir /b "%OUTDIR%"
+  goto :fail
+)
 if not defined SETUP (
   echo [installer] BLOCKER: no installer executable was produced under release-local\
   dir /b "%OUTDIR%"

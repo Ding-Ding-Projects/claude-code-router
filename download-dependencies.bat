@@ -57,6 +57,8 @@ if "%IS_ADMIN%"=="1" (
 
 rem ============================================================
 rem Phase 1/2: Node.js 22+ (canonical upstream https://nodejs.org)
+rem Pin + digest sources are recorded in scripts\DEPENDENCIES.manifest.md;
+rem this phase verifies its installed version against that manifest.
 rem ============================================================
 echo [deps] Phase 1/2: checking Node.js ^>= 22
 set "NODE_VER="
@@ -83,7 +85,10 @@ if ERRORLEVEL 1 (
   exit /b 1
 )
 echo [deps] Installing via winget: package id OpenJS.NodeJS.LTS - canonical upstream https://nodejs.org
-winget install --id OpenJS.NodeJS.LTS -e --accept-source-agreements --accept-package-agreements
+rem --silent keeps the installer UI from ever appearing, so a silent run never
+rem prompts. The LTS installer is machine-scope: a NON-elevated run may be
+rem refused by Windows and fails loudly here rather than showing a UAC prompt.
+winget install --id OpenJS.NodeJS.LTS -e --silent --accept-source-agreements --accept-package-agreements
 if ERRORLEVEL 1 (
   echo [deps] BLOCKER: winget failed to install Node.js.
   echo [deps] Required: Node.js 22 LTS or newer. Source: https://nodejs.org/en/download
@@ -109,6 +114,20 @@ if !NODE_MAJOR! LSS 22 (
 )
 :node_ready
 echo [deps] Node.js ready: !NODE_VER!
+
+rem ---- manifest check: scripts\DEPENDENCIES.manifest.md pins the LTS major ----
+set "NODE_MANIFEST_MAJOR=22"
+echo [deps] Manifest: scripts\DEPENDENCIES.manifest.md pins Node.js LTS major %NODE_MANIFEST_MAJOR%
+if !NODE_MAJOR! EQU %NODE_MANIFEST_MAJOR% (
+  echo [deps] Node.js !NODE_VER! matches the manifest pin of major %NODE_MANIFEST_MAJOR%.
+) else if !NODE_MAJOR! GTR %NODE_MANIFEST_MAJOR% (
+  echo [deps] WARNING: Node.js !NODE_VER! is NEWER than the manifest pin of major %NODE_MANIFEST_MAJOR%.
+  echo [deps] Best-effort pin: continuing, but update scripts\DEPENDENCIES.manifest.md to record the new LTS line.
+) else (
+  echo [deps] BLOCKER: Node.js !NODE_VER! is OLDER than the manifest pin of major %NODE_MANIFEST_MAJOR%.
+  echo [deps] Required: Node.js %NODE_MANIFEST_MAJOR% LTS or newer. Source: https://nodejs.org/en/download
+  exit /b 1
+)
 
 rem ============================================================
 rem Phase 2/2: workspace dependencies (npm ci, lockfile pinned)

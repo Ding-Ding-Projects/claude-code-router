@@ -265,6 +265,47 @@ Claude Code · Claude Design · Codex · Grok CLI · Kimi CLI · Kilo Code · Op
 | **Observability** | Request and response details; resolved provider, model, and credential; status; latency; tokens; estimated cost; tool calls; agent traces |
 | **AgentClaw** | Agent relay through Weixin iLink, WeCom, Slack, Discord, Telegram, LINE, Feishu, and DingTalk |
 
+## Features (landing in this release train)
+
+> **Status: none of the three capabilities below is shipped yet.** Each is
+> delivered by a branch of the current release train that is still local and
+> unmerged (`feat/m3-tokens`, `feat/m3-home-app`, `feat/m3-tray-browser`,
+> `feat/ultracode-effort-core`, `feat/ultracode-effort-ui`, `feat/org-banner`).
+> The descriptions are the designed behavior those branches implement, not
+> released functionality; this section moves to past tense only once they land.
+
+### Material Design 3 management UI
+
+*Delivered by `feat/m3-tokens` + `feat/m3-home-app` + `feat/m3-tray-browser` — implementation in progress.*
+
+The management UI is being rebuilt on a Material Design 3 token system under `packages/ui/src/styles/m3`: color roles for light and dark themes exposed as `--md-sys-*` custom properties, plus type scale, shape, elevation, and motion tokens. A `ThemeProvider` will apply the active theme through a `data-md-theme` attribute and persist the choice in `localStorage`, and the home, tray, and browser surfaces are converted to the token layer by those branches.
+
+Full article: [Material Design 3 management UI](docs/features/material-design-3-ui.md)
+
+### Ultracode reasoning effort
+
+*Delivered by `feat/ultracode-effort-core` + `feat/ultracode-effort-ui` — implementation in progress.*
+
+`ultracode` will be a new top reasoning-effort tier sitting above `ultra`, `xhigh`, and `max`. Capable models will expose it through the gateway model catalog, the upstream request transform will pass the named effort through and apply the maximum thinking budget where the provider takes a numeric value, and both the Claude Code desktop model picker and the management UI picker will list it with English and Traditional Chinese (zh-Hant) labels.
+
+Full article: [Ultracode reasoning effort](docs/features/reasoning-effort-ultracode.md)
+
+### Organization banner
+
+*Delivered by `feat/org-banner` — implementation in progress.*
+
+A persisted `organizationBanner` configuration—`enabled`, `text` up to 200 characters, optional `https` image URL up to 500 characters—will render an M3-styled header strip on the management UI home. Settings inputs will manage it with inline validation, and the strip will be hidden entirely when disabled.
+
+Full article: [Organization banner](docs/features/organization-banner.md)
+
+### Documentation index
+
+| Article | Covers |
+| --- | --- |
+| [Material Design 3 management UI](docs/features/material-design-3-ui.md) | Token system, theming with `data-md-theme`, converted surfaces |
+| [Ultracode reasoning effort](docs/features/reasoning-effort-ultracode.md) | New top tier, catalog exposure, request transform mapping |
+| [Organization banner](docs/features/organization-banner.md) | Config schema, settings inputs, home header strip |
+
 ## Go deeper when you are ready
 
 The complete documentation lives at **[ccrdesk.top](https://ccrdesk.top/)**.
