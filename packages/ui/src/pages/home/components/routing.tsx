@@ -1,6 +1,6 @@
 import {
   AddRoutingRuleDraft, AnimatedListItem, AnimatePresence, AppConfig, ArrowDown,
-  ArrowUp, Badge, buildRoutingRuleRows, Button, Card, CardContent,
+  ArrowUp, Badge, buildRoutingRuleRows, Card, CardContent,
   CardHeader, Check, CircleAlert, clampNumber, cn, createRouteModelOptions, createRoutingRewriteDraftRow,
   Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle,
   disclosureSpringTransition, Field, formatRouterRuleCondition, formatRouterRuleTarget, GatewayProviderConfig, Input,
@@ -10,6 +10,7 @@ import {
   RouteTargetControl, routingRuleRowMatchesQuery, Search, SelectControl, Toggle, translateOptions,
   Textarea, Trash2, uniqueStrings, useAppText, useContext, useMemo, useRef, useState, X
 } from "../shared/index";
+import { MdButton } from "@/components/md3";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   ROUTER_FALLBACK_MAX_RETRY_COUNT,
@@ -64,10 +65,10 @@ export function RoutingView({
               value={query}
             />
           </div>
-          <Button aria-label={t("Add routing rule")} onClick={addRule} title={t("Add routing rule")} type="button">
+          <MdButton aria-label={t("Add routing rule")} onClick={addRule} size="sm" title={t("Add routing rule")} type="button">
             <Plus className="h-4 w-4" />
             {t("Add")}
-          </Button>
+          </MdButton>
         </CardHeader>
         <CardContent className="min-h-0 flex-1 overflow-auto p-0">
           <div className="border-b border-border/60 px-4 py-3">
@@ -79,19 +80,19 @@ export function RoutingView({
             />
           </div>
           {rows.length === 0 ? (
-            <div className="m-4 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-10 text-center">
-              <Route className="mx-auto mb-2 h-7 w-7 text-muted-foreground/40" />
-              <div className="text-[12px] text-muted-foreground">{t("No routing rules configured")}</div>
-              <div className="mt-1 text-[11px] text-muted-foreground/60">{t("Click Add to create one")}</div>
+            <div className="m-4 rounded-[var(--md-sys-shape-corner-medium)] border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-10 text-center">
+              <Route className="mx-auto mb-2 h-7 w-7 text-[var(--md-sys-color-outline)]" />
+              <div className="md-type-body-medium text-[var(--md-sys-color-on-surface-variant)]">{t("No routing rules configured")}</div>
+              <div className="md-type-body-small mt-1 text-[var(--md-sys-color-outline)]">{t("Click Add to create one")}</div>
             </div>
           ) : null}
           {rows.length > 0 && visibleRules.length === 0 ? (
-            <div className="m-4 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-10 text-center text-[12px] text-muted-foreground">{t("No matching routing rules")}</div>
+            <div className="md-type-body-medium m-4 rounded-[var(--md-sys-shape-corner-medium)] border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-10 text-center text-[var(--md-sys-color-on-surface-variant)]">{t("No matching routing rules")}</div>
           ) : null}
           {visibleRules.length > 0 ? (
             <div className="min-w-0">
               <div className="min-w-[940px]">
-                <div className="sticky top-0 z-10 grid h-10 grid-cols-[minmax(160px,0.8fr)_minmax(220px,1fr)_minmax(240px,1.15fr)_84px_148px] items-center gap-3 border-b border-border/60 bg-muted/95 px-4 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                <div className="md-type-label-medium sticky top-0 z-10 grid h-10 grid-cols-[minmax(160px,0.8fr)_minmax(220px,1fr)_minmax(240px,1.15fr)_84px_148px] items-center gap-3 border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-4 uppercase tracking-wide text-[var(--md-sys-color-on-surface-variant)]">
                   <div className="truncate">{t("Name")}</div>
                   <div className="truncate">{t("Condition")}</div>
                   <div className="truncate">{t("Request action")}</div>
@@ -106,7 +107,7 @@ export function RoutingView({
                     const toggleDisabledReason = row.toggleDisabledReason ? t(row.toggleDisabledReason) : undefined;
                     return (
                       <AnimatedListItem
-                        className="grid min-h-[58px] grid-cols-[minmax(160px,0.8fr)_minmax(220px,1fr)_minmax(240px,1.15fr)_84px_148px] items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/35"
+                        className="grid min-h-[58px] grid-cols-[minmax(160px,0.8fr)_minmax(220px,1fr)_minmax(240px,1.15fr)_84px_148px] items-center gap-3 px-4 py-2.5 transition-colors duration-[var(--md-sys-motion-duration-short3)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_4%,transparent)]"
                         key={row.key}
                       >
                       <div className="min-w-0">
@@ -114,19 +115,19 @@ export function RoutingView({
                           <div className="truncate text-[12px] font-semibold">{row.name || t("Unnamed")}</div>
                           {row.readonly ? <Badge variant="outline">{t("Plugin")}</Badge> : null}
                         </div>
-                        <div className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground" title={`${rowSourceLabel}: ${row.ruleId}`}>
+                        <div className="md-type-body-small mt-0.5 truncate font-mono text-[var(--md-sys-color-on-surface-variant)]" title={`${rowSourceLabel}: ${row.ruleId}`}>
                           {rowSourceLabel}: {row.ruleId}
                         </div>
                       </div>
                       <div className="min-w-0">
                         <div className="flex min-w-0 items-center gap-2">
                           <Badge variant="outline">{t(row.typeLabel)}</Badge>
-                          <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground" title={row.condition}>
+                          <span className="md-type-body-small min-w-0 flex-1 truncate text-[var(--md-sys-color-on-surface-variant)]" title={row.condition}>
                             {row.condition}
                           </span>
                         </div>
                       </div>
-                      <div className="min-w-0 truncate font-mono text-[11px] text-muted-foreground" title={rowTarget}>
+                      <div className="md-type-body-small min-w-0 truncate font-mono text-[var(--md-sys-color-on-surface-variant)]" title={rowTarget}>
                         {rowTarget}
                       </div>
                       <div className="flex min-w-0 items-center gap-2">
@@ -151,13 +152,13 @@ export function RoutingView({
                         </Tooltip>
                       </div>
                       <div className="flex items-center justify-end gap-1">
-                        <Button aria-label={`${t("Move")} ${row.name || t("rule")} ${t("up")}`} disabled={row.readonly || row.index === undefined || row.index === 0} onClick={() => row.index !== undefined && moveRule(row.index, -1)} size="iconSm" title={t("Move up")} type="button" variant="ghost">
+                        <MdButton aria-label={`${t("Move")} ${row.name || t("rule")} ${t("up")}`} disabled={row.readonly || row.index === undefined || row.index === 0} onClick={() => row.index !== undefined && moveRule(row.index, -1)} size="iconSm" title={t("Move up")} type="button" variant="text">
                           <ArrowUp className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button aria-label={`${t("Move")} ${row.name || t("rule")} ${t("down")}`} disabled={row.readonly || row.index === undefined || row.index === row.ruleCount - 1} onClick={() => row.index !== undefined && moveRule(row.index, 1)} size="iconSm" title={t("Move down")} type="button" variant="ghost">
+                        </MdButton>
+                        <MdButton aria-label={`${t("Move")} ${row.name || t("rule")} ${t("down")}`} disabled={row.readonly || row.index === undefined || row.index === row.ruleCount - 1} onClick={() => row.index !== undefined && moveRule(row.index, 1)} size="iconSm" title={t("Move down")} type="button" variant="text">
                           <ArrowDown className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
+                        </MdButton>
+                        <MdButton
                           aria-label={`${t("Edit")} ${row.name || t("rule")}`}
                           disabled={row.readonly || row.index === undefined}
                           onClick={() => {
@@ -168,13 +169,13 @@ export function RoutingView({
                           size="iconSm"
                           title={t("Edit rule")}
                           type="button"
-                          variant="ghost"
+                          variant="text"
                         >
                           <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button aria-label={`${t("Remove")} ${row.name || t("rule")}`} disabled={row.readonly || row.index === undefined} onClick={() => row.index !== undefined && removeRule(row.index)} size="iconSm" title={t("Remove rule")} type="button" variant="ghost">
+                        </MdButton>
+                        <MdButton aria-label={`${t("Remove")} ${row.name || t("rule")}`} disabled={row.readonly || row.index === undefined} onClick={() => row.index !== undefined && removeRule(row.index)} size="iconSm" title={t("Remove rule")} type="button" variant="text">
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </MdButton>
                       </div>
                       </AnimatedListItem>
                     );
@@ -277,30 +278,30 @@ export function RouterFallbackControl({
                 value={fallbackModelDraft}
               />
             </Field>
-            <Button disabled={!fallbackModelDraft.trim()} onClick={addFallbackModel} type="button">
+            <MdButton disabled={!fallbackModelDraft.trim()} onClick={addFallbackModel} size="sm" type="button">
               <Plus className="h-4 w-4" />
               {t("Add")}
-            </Button>
+            </MdButton>
           </div>
         ) : null}
       </div>
       {fallback.mode === "model-chain" ? (
         <div className="mt-3 flex min-w-0 flex-wrap gap-2">
           {fallback.models.length === 0 ? (
-            <div className="text-[12px] text-muted-foreground">{t("No fallback targets configured")}</div>
+            <div className="md-type-body-medium text-[var(--md-sys-color-on-surface-variant)]">{t("No fallback targets configured")}</div>
           ) : (
             fallback.models.map((model, index) => (
-              <div className="flex max-w-full items-center gap-1 rounded-md border border-border bg-background px-2 py-1" key={`${model}-${index}`}>
+              <div className="flex max-w-full items-center gap-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-lowest)] px-2 py-1" key={`${model}-${index}`}>
                 <span className="min-w-0 truncate font-mono text-[11px]" title={model}>{model}</span>
-                <Button aria-label={`${t("Move")} ${model} ${t("up")}`} disabled={index === 0} onClick={() => moveFallbackModel(index, -1)} size="iconSm" title={t("Move up")} type="button" variant="ghost">
+                <MdButton aria-label={`${t("Move")} ${model} ${t("up")}`} disabled={index === 0} onClick={() => moveFallbackModel(index, -1)} size="iconSm" title={t("Move up")} type="button" variant="text">
                   <ArrowUp className="h-3.5 w-3.5" />
-                </Button>
-                <Button aria-label={`${t("Move")} ${model} ${t("down")}`} disabled={index === fallback.models.length - 1} onClick={() => moveFallbackModel(index, 1)} size="iconSm" title={t("Move down")} type="button" variant="ghost">
+                </MdButton>
+                <MdButton aria-label={`${t("Move")} ${model} ${t("down")}`} disabled={index === fallback.models.length - 1} onClick={() => moveFallbackModel(index, 1)} size="iconSm" title={t("Move down")} type="button" variant="text">
                   <ArrowDown className="h-3.5 w-3.5" />
-                </Button>
-                <Button aria-label={`${t("Remove")} ${model}`} onClick={() => removeFallbackModel(index)} size="iconSm" title={t("Remove")} type="button" variant="ghost">
+                </MdButton>
+                <MdButton aria-label={`${t("Remove")} ${model}`} onClick={() => removeFallbackModel(index)} size="iconSm" title={t("Remove")} type="button" variant="text">
                   <X className="h-3.5 w-3.5" />
-                </Button>
+                </MdButton>
               </div>
             ))
           )}
@@ -331,26 +332,26 @@ export function DeleteRoutingRuleDialog({
           <div className="min-w-0">
             <DialogTitle>{t("Delete Routing Rule")}</DialogTitle>
           </div>
-          <Button aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="ghost">
+          <MdButton aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="text">
             <X className="h-4 w-4" />
-          </Button>
+          </MdButton>
         </DialogHeader>
 
         <DialogBody>
-          <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5">
-            <div className="flex items-start gap-2 text-[12px] font-medium text-destructive">
+          <div className="rounded-[var(--md-sys-shape-corner-small)] border border-transparent bg-[var(--md-sys-color-error-container)] px-3 py-2.5">
+            <div className="md-type-body-medium flex items-start gap-2 font-medium text-[var(--md-sys-color-on-error-container)]">
               <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>{t("Delete this routing rule from the configuration?")}</span>
             </div>
-            <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+            <div className="md-type-body-small mt-2 space-y-1 text-[color-mix(in_srgb,var(--md-sys-color-on-error-container)_80%,var(--md-sys-color-on-surface))]">
               <div className="truncate" title={name}>
-                <span className="font-medium text-foreground">{t("Name")}:</span> {name}
+                <span className="font-medium text-[var(--md-sys-color-on-error-container)]">{t("Name")}:</span> {name}
               </div>
               <div className="truncate" title={condition}>
-                <span className="font-medium text-foreground">{t("Condition")}:</span> {condition}
+                <span className="font-medium text-[var(--md-sys-color-on-error-container)]">{t("Condition")}:</span> {condition}
               </div>
               <div className="truncate" title={target}>
-                <span className="font-medium text-foreground">{t("Request action")}:</span> {target}
+                <span className="font-medium text-[var(--md-sys-color-on-error-container)]">{t("Request action")}:</span> {target}
               </div>
               <div>{t("This action is applied immediately to the draft config and will auto-save with other changes.")}</div>
             </div>
@@ -358,13 +359,13 @@ export function DeleteRoutingRuleDialog({
         </DialogBody>
 
         <DialogFooter>
-          <Button autoFocus onClick={onClose} type="button" variant="outline">
+          <MdButton autoFocus onClick={onClose} size="sm" type="button" variant="outlined">
             {t("Cancel")}
-          </Button>
-          <Button onClick={onConfirm} type="button" variant="destructive">
+          </MdButton>
+          <MdButton onClick={onConfirm} size="sm" type="button" variant="error">
             <Trash2 className="h-4 w-4" />
             {t("Delete")}
-          </Button>
+          </MdButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -499,9 +500,9 @@ export function AddRoutingRuleDialog({
           <div className="min-w-0">
             <DialogTitle>{mode === "edit" ? t("Edit Routing Rule") : t("Add Routing Rule")}</DialogTitle>
           </div>
-          <Button aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="ghost">
+          <MdButton aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="text">
             <X className="h-4 w-4" />
-          </Button>
+          </MdButton>
         </DialogHeader>
 
         <DialogBody>
@@ -526,7 +527,7 @@ export function AddRoutingRuleDialog({
               />
             </Field> : null}
             {draft.type === "condition" ? <Field className="sm:col-span-2" label={t("Condition")}>
-              <div className="rounded-md border border-border bg-muted/20 p-2">
+              <div className="rounded-[var(--md-sys-shape-corner-small)] border border-transparent bg-[var(--md-sys-color-surface-container-low)] p-2">
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-[160px_minmax(0,1fr)_112px_minmax(0,1fr)]">
                   <SelectControl
                     onChange={(source) => onChange({ conditionSource: source as AddRoutingRuleDraft["conditionSource"] })}
@@ -556,7 +557,7 @@ export function AddRoutingRuleDialog({
               <>
                 <div className="sm:col-span-2 min-w-0 space-y-1">
                   <div className="flex min-w-0 items-center gap-2">
-                    <span className="min-w-0 truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    <span className="md-type-label-medium min-w-0 truncate uppercase tracking-wide text-[var(--md-sys-color-on-surface-variant)]">
                       {t("Node.js route script file")}
                     </span>
                     <a
@@ -581,10 +582,10 @@ export function AddRoutingRuleDialog({
                       placeholder="/path/to/route-script.js"
                       value={draft.scriptFile}
                     />
-                    <Button onClick={() => scriptFileInputRef.current?.click()} type="button" variant="outline">
+                    <MdButton onClick={() => scriptFileInputRef.current?.click()} size="sm" type="button" variant="tonal">
                       <FolderOpen className="h-4 w-4" />
                       {t("Choose file")}
-                    </Button>
+                    </MdButton>
                     <input
                       accept=".js,.mjs,.cjs,text/javascript,application/javascript"
                       className="hidden"
@@ -616,17 +617,17 @@ export function AddRoutingRuleDialog({
                   />
                 </Field>
                 <div className="sm:col-span-2 flex flex-wrap items-center gap-2">
-                  <Button disabled={Boolean(scriptBusy)} onClick={() => void validateScript()} type="button" variant="outline">
+                  <MdButton disabled={Boolean(scriptBusy)} onClick={() => void validateScript()} size="sm" type="button" variant="outlined">
                     {t("Validate")}
-                  </Button>
-                  <Button disabled={Boolean(scriptBusy)} onClick={() => void testScript()} type="button" variant="outline">
+                  </MdButton>
+                  <MdButton disabled={Boolean(scriptBusy)} onClick={() => void testScript()} size="sm" type="button" variant="outlined">
                     {t("Test script")}
-                  </Button>
+                  </MdButton>
                 </div>
                 {scriptMessage ? (
                   <pre className={cn(
-                    "sm:col-span-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-md border px-3 py-2 text-xs",
-                    scriptMessage.ok ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200" : "border-destructive/30 bg-destructive/10 text-destructive"
+                    "md-type-body-small sm:col-span-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-[var(--md-sys-shape-corner-small)] border border-transparent px-3 py-2",
+                    scriptMessage.ok ? "bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]" : "bg-[var(--md-sys-color-error-container)] text-[var(--md-sys-color-on-error-container)]"
                   )}>
                     {scriptMessage.text}
                   </pre>
@@ -634,7 +635,7 @@ export function AddRoutingRuleDialog({
               </>
             )}
             {draft.type === "condition" ? <Field className="sm:col-span-2" label={t("Rewrite request parameters")}>
-              <div className="space-y-2 rounded-md border border-border bg-muted/20 p-2">
+              <div className="space-y-2 rounded-[var(--md-sys-shape-corner-small)] border border-transparent bg-[var(--md-sys-color-surface-container-low)] p-2">
                 {draft.rewrites.map((rewrite, index) => (
                   <div
                     className="grid grid-cols-1 gap-2 sm:grid-cols-[150px_minmax(0,1fr)_minmax(0,1fr)_32px]"
@@ -652,7 +653,7 @@ export function AddRoutingRuleDialog({
                       value={rewrite.key}
                     />
                     {rewrite.operation === "delete" ? (
-                      <div className="h-9 rounded-md border border-dashed border-border bg-background/40" />
+                      <div className="h-9 rounded-[var(--md-sys-shape-corner-extra-small)] border border-dashed border-[var(--md-sys-color-outline-variant)] bg-transparent" />
                     ) : rewrite.operation === "array-replace" ? (
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <Input
@@ -676,23 +677,23 @@ export function AddRoutingRuleDialog({
                         value={rewrite.value}
                       />
                     )}
-                    <Button
+                    <MdButton
                       aria-label={t("Remove")}
                       disabled={draft.rewrites.length <= 1}
                       onClick={() => removeRewrite(index)}
                       size="iconSm"
                       title={t("Remove")}
                       type="button"
-                      variant="ghost"
+                      variant="text"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    </MdButton>
                   </div>
                 ))}
-                <Button onClick={addRewrite} type="button" variant="outline">
+                <MdButton onClick={addRewrite} size="sm" type="button" variant="tonal">
                   <Plus className="h-4 w-4" />
                   {t("Add parameter")}
-                </Button>
+                </MdButton>
               </div>
             </Field> : null}
             <Field label={t("Enabled")}>
@@ -709,17 +710,17 @@ export function AddRoutingRuleDialog({
         </DialogBody>
 
         <DialogFooter>
-          <Button onClick={onClose} type="button" variant="outline">
+          <MdButton onClick={onClose} size="sm" type="button" variant="outlined">
             {t("Cancel")}
-          </Button>
-          <Button
+          </MdButton>
+          <MdButton
             disabled={!canSubmit || Boolean(scriptBusy)}
             onClick={() => draft.type === "script" ? void validateScript("submit") : onSubmit()}
             type="button"
           >
             {mode === "edit" ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
             {mode === "edit" ? t("Save") : t("Add")}
-          </Button>
+          </MdButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

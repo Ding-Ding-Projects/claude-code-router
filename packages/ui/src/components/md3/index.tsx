@@ -14,8 +14,8 @@ import { cn } from "@/lib/utils";
  * migrate to them lane by lane.
  */
 
-export type MdButtonVariant = "filled" | "elevated" | "tonal" | "outlined" | "text";
-export type MdButtonSize = "sm" | "default" | "lg" | "icon";
+export type MdButtonVariant = "filled" | "elevated" | "tonal" | "outlined" | "text" | "error";
+export type MdButtonSize = "sm" | "default" | "lg" | "icon" | "iconSm";
 
 export interface MdButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "color"> {
   size?: MdButtonSize;
@@ -27,14 +27,16 @@ const mdButtonVariantClass: Record<MdButtonVariant, string> = {
   elevated: "md-btn--elevated",
   tonal: "md-btn--tonal",
   outlined: "md-btn--outlined",
-  text: "md-btn--text"
+  text: "md-btn--text",
+  error: "md-btn--error"
 };
 
 const mdButtonSizeClass: Record<MdButtonSize, string> = {
   sm: "md-btn--sm",
   default: "",
   lg: "md-btn--lg",
-  icon: "md-btn--icon"
+  icon: "md-btn--icon",
+  iconSm: "md-btn--icon md-btn--icon-sm"
 };
 
 /**

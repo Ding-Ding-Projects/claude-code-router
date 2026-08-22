@@ -113,6 +113,27 @@
   background: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent);
 }
 
+/* M3 error button: filled with the error roles (destructive actions). */
+.md-btn--error {
+  background: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error);
+}
+
+.md-btn--error:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--md-sys-color-on-error) 8%, var(--md-sys-color-error));
+  box-shadow: var(--md-elevation-level1);
+}
+
+.md-btn--error:active:not(:disabled) {
+  background: color-mix(in srgb, var(--md-sys-color-on-error) 12%, var(--md-sys-color-error));
+  box-shadow: none;
+}
+
+.md-btn--error:disabled {
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
+  box-shadow: none;
+}
+
 .md-btn--sm {
   height: 32px;
   padding: 0 16px;
@@ -130,6 +151,12 @@
   height: 40px;
   padding: 0;
   width: 40px;
+}
+
+.md-btn--icon-sm {
+  height: 28px;
+  padding: 0;
+  width: 28px;
 }
 
 /* ---- MdCard --------------------------------------------------------- */

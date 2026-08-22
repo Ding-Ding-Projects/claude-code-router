@@ -182,12 +182,12 @@ function ShareCardShell({
   return (
     <article className="flex h-full min-h-0 min-w-0 flex-col space-y-2">
       <div className="flex min-w-0 items-center justify-between gap-2">
-        <div className="min-w-0 truncate text-[12px] font-semibold text-muted-foreground">{title}</div>
+        <div className="md-type-label-medium min-w-0 truncate font-semibold text-[var(--md-sys-color-on-surface-variant)]">{title}</div>
         <div className="flex shrink-0 items-center gap-2">
-          {status === "error" ? <span className="text-[11px] font-medium text-destructive">{t("Export failed")}</span> : null}
+          {status === "error" ? <span className="md-type-label-small font-medium text-[var(--md-sys-color-error)]">{t("Export failed")}</span> : null}
           <Button
             aria-label={status === "saving" ? t("Saving") : t("Save image")}
-            className="inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25 disabled:pointer-events-none disabled:opacity-45"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--md-sys-color-on-surface-variant)] transition-colors duration-[var(--md-sys-motion-duration-short3)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,transparent)] hover:text-[var(--md-sys-color-on-surface)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--md-sys-color-primary)] disabled:pointer-events-none disabled:opacity-45"
             disabled={status === "saving"}
             title={status === "saving" ? t("Saving") : t("Save image")}
             type="button"

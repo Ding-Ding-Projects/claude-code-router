@@ -22,6 +22,7 @@ import {
   useEffect, useMemo, useRef, useSensor, useSensors, useSortable,
   useState, X, XAxis, YAxis
 } from "../shared/index";
+import { MdButton } from "@/components/md3";
 import { buildTokenActivity, type TokenActivityCell } from "@/lib/usage-activity";
 import { ShareCardWidget } from "./share-cards";
 import {
@@ -396,10 +397,10 @@ export function OverviewView({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {editing ? (
-            <Button onClick={resetLayout} size="sm" type="button" variant="outline">
+            <MdButton onClick={resetLayout} size="sm" type="button" variant="outlined">
               <RefreshCw className="h-3.5 w-3.5" />
               {t("Reset layout")}
-            </Button>
+            </MdButton>
           ) : null}
           <Button
             aria-label={editing ? t("Done") : t("Edit widgets")}
@@ -3704,15 +3705,14 @@ function CodexResetCreditDialog({
               </div>
               <div className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-[10px] font-medium text-muted-foreground">{activeIndex + 1} / {Math.max(cards.length, 1)}</div>
             </div>
-            <Button
+            <MdButton
               className={cn(
                 "group relative h-14 w-full overflow-hidden rounded-full border border-red-400/50 bg-gradient-to-b from-orange-500 to-red-600 px-5 text-white shadow-[0_10px_28px_rgba(239,68,68,0.28)] transition-shadow hover:from-orange-400 hover:to-red-600 hover:shadow-[0_14px_36px_rgba(239,68,68,0.4)] disabled:opacity-100",
                 status === "complete" && "border-emerald-400/40 bg-gradient-to-b from-emerald-500 to-emerald-700 hover:from-emerald-500 hover:to-emerald-700"
               )}
               disabled={status !== "idle" || !activeDetail?.id || activeDetail.redeemable === false}
               onClick={() => void resetCredit()}
-              type="button"
-            >
+              type="button" size="sm" variant="filled">
               <motion.span
                 animate={status === "resetting" ? { x: [-1, 1, -2, 2, 0], y: [0, -1, 1, -1, 0] } : {}}
                 className="relative z-10 flex items-center justify-center gap-2.5 text-[14px] font-bold uppercase tracking-[0.1em]"
@@ -3745,7 +3745,7 @@ function CodexResetCreditDialog({
                   />
                 ) : null}
               </AnimatePresence>
-            </Button>
+            </MdButton>
             {error ? <div className="mt-3 rounded-md border border-destructive/25 bg-destructive/10 px-3 py-2 text-[11px] text-destructive">{error}</div> : null}
           </div>
         </DialogBody>
@@ -4407,9 +4407,9 @@ function AgentSessionDetailCard({
               {headerLabel}
             </div>
           </div>
-          <Button aria-label={t("Close")} onClick={clearSession} size="iconSm" title={t("Close")} type="button" variant="ghost">
+          <MdButton aria-label={t("Close")} onClick={clearSession} size="iconSm" title={t("Close")} type="button" variant="text">
             <X className="h-3.5 w-3.5" />
-          </Button>
+          </MdButton>
         </DialogHeader>
         <DialogBody>
         {!detail ? (
@@ -4646,9 +4646,9 @@ function ToolPayloadDialog({
               {tool?.callId ? compactId(tool.callId) : t("Tool")}
             </div>
           </div>
-          <Button aria-label={t("Close")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="ghost">
+          <MdButton aria-label={t("Close")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="text">
             <X className="h-3.5 w-3.5" />
-          </Button>
+          </MdButton>
         </DialogHeader>
         <DialogBody className="overflow-hidden">
           <div className="grid h-full min-h-0 grid-cols-1 gap-3 xl:grid-cols-2">
@@ -5041,7 +5041,7 @@ function AgentSessionsCard({
 
 function AnalysisEmptyState({ label }: { label: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-border bg-muted/30 px-3 py-8 text-center text-[12px] text-muted-foreground">
+    <div className="rounded-lg border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-8 text-center text-[12px] text-muted-foreground">
       {label}
     </div>
   );

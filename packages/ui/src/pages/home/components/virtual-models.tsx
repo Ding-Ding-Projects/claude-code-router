@@ -1,6 +1,5 @@
 import {
-  AnimatedListItem, AnimatedPopover, AnimatePresence, Boxes, Button,
-  Card, CardContent, CardHeader, CardTitle, Check, ChevronDown, ChevronRight,
+  AnimatedListItem, AnimatedPopover, AnimatePresence, Boxes, Card, CardContent, CardHeader, CardTitle, Check, ChevronDown, ChevronRight,
   cn, createMcpServerDraftFromConfig, createRouteModelOptions, defaultFusionWebSearchProvider, Dialog, DialogBody, DialogContent, DialogFooter,
   DialogHeader, DialogTitle, ExtensionInstallDraft, Field, FolderOpen, formatPluginDependencies,
   createFusionWebSearchEnvRows, createKeyValueDraftRow, customFusionToolName, fusionToolExecutionFlagsFromTools, fusionToolOptions,
@@ -13,6 +12,7 @@ import {
   type KeyValueDraftRow,
   VirtualModelProfileConfig, virtualModelToolSummary, X
 } from "../shared/index";
+import { MdButton } from "@/components/md3";
 import { PopoverPortal } from "@/components/ui/popover";
 import { createGrokMediaModelOptions } from "@ccr/core/media/models";
 
@@ -104,14 +104,14 @@ export function VirtualModelsView({
               value={query}
             />
           </div>
-          <Button aria-label={t("Add virtual model")} onClick={addVirtualModel} title={t("Add virtual model")} type="button">
+          <MdButton aria-label={t("Add virtual model")} onClick={addVirtualModel} title={t("Add virtual model")} type="button" size="sm" variant="filled">
             <Plus className="h-4 w-4" />
             {t("Add")}
-          </Button>
+          </MdButton>
         </CardHeader>
         <CardContent className="min-h-0 flex-1 overflow-auto p-0">
           {profiles.length === 0 ? (
-            <div className="m-4 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-10 text-center">
+            <div className="m-4 rounded-lg border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-10 text-center">
               <Boxes className="mx-auto mb-2 h-7 w-7 text-muted-foreground/40" />
               <div className="text-[13px] font-semibold text-foreground">{t("No virtual models configured")}</div>
               <div className="mx-auto mt-1 max-w-[480px] text-[12px] leading-5 text-muted-foreground">{t("Fusion combines a model with another model or tools into a new model.")}</div>
@@ -119,12 +119,12 @@ export function VirtualModelsView({
             </div>
           ) : null}
           {profiles.length > 0 && visibleProfiles.length === 0 ? (
-            <div className="m-4 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-10 text-center text-[12px] text-muted-foreground">{t("No matching virtual models")}</div>
+            <div className="m-4 rounded-lg border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-10 text-center text-[12px] text-muted-foreground">{t("No matching virtual models")}</div>
           ) : null}
           {visibleProfiles.length > 0 ? (
             <div className="min-w-0">
               <div className={cn("w-full", virtualModelTableMinWidthClass)}>
-                <div className={cn("sticky top-0 z-10 grid h-10 items-center gap-3 border-b border-border/60 bg-muted/95 px-4 text-[11px] font-medium uppercase tracking-wide text-muted-foreground", virtualModelTableGridClass)}>
+                <div className={cn("sticky top-0 z-10 grid h-10 md-type-label-medium items-center gap-3 border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-4 uppercase tracking-wide text-[var(--md-sys-color-on-surface-variant)]", virtualModelTableGridClass)}>
                   <div className="truncate">{t("Name")}</div>
                   <div className="truncate">{t("New model")}</div>
                   <div className="truncate">{t("Base model")}</div>
@@ -136,7 +136,7 @@ export function VirtualModelsView({
                   <AnimatePresence initial={false}>
                     {visibleProfiles.map(({ index, profile }) => (
                       <AnimatedListItem
-                        className={cn("grid min-h-[58px] items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/35", virtualModelTableGridClass)}
+                        className={cn("grid min-h-[58px] items-center gap-3 px-4 py-2.5 transition-colors duration-[var(--md-sys-motion-duration-short3)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_4%,transparent)]", virtualModelTableGridClass)}
                         key={`${profile.id || profile.key}-${index}`}
                       >
                         <div className="min-w-0">
@@ -158,12 +158,12 @@ export function VirtualModelsView({
                           <Toggle checked={profile.enabled !== false} onChange={(enabled) => setVirtualModelEnabled(index, enabled)} />
                         </div>
                         <div className="flex items-center justify-end gap-1">
-                          <Button aria-label={`${t("Edit virtual model")} ${profile.displayName || profile.key}`} onClick={() => editVirtualModel(index)} size="iconSm" title={t("Edit virtual model")} type="button" variant="ghost">
+                          <MdButton aria-label={`${t("Edit virtual model")} ${profile.displayName || profile.key}`} onClick={() => editVirtualModel(index)} size="iconSm" title={t("Edit virtual model")} type="button" variant="text">
                             <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button aria-label={`${t("Remove virtual model")} ${profile.displayName || profile.key}`} onClick={() => removeVirtualModel(index)} size="iconSm" title={t("Remove virtual model")} type="button" variant="ghost">
+                          </MdButton>
+                          <MdButton aria-label={`${t("Remove virtual model")} ${profile.displayName || profile.key}`} onClick={() => removeVirtualModel(index)} size="iconSm" title={t("Remove virtual model")} type="button" variant="text">
                             <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          </MdButton>
                         </div>
                       </AnimatedListItem>
                     ))}
@@ -413,9 +413,9 @@ export function VirtualModelDialog({
           <div className="min-w-0">
             <DialogTitle>{mode === "edit" ? t("Edit Virtual Model") : t("Add Virtual Model")}</DialogTitle>
           </div>
-          <Button aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="ghost">
+          <MdButton aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="text">
             <X className="h-4 w-4" />
-          </Button>
+          </MdButton>
         </DialogHeader>
 
         <DialogBody>
@@ -465,13 +465,13 @@ export function VirtualModelDialog({
         </DialogBody>
 
         <DialogFooter>
-          <Button onClick={onClose} type="button" variant="outline">
+          <MdButton onClick={onClose} type="button" size="sm" variant="outlined">
             {t("Cancel")}
-          </Button>
-          <Button disabled={!canSubmit} onClick={onSubmit} type="button">
+          </MdButton>
+          <MdButton disabled={!canSubmit} onClick={onSubmit} type="button" size="sm" variant="filled">
             {mode === "edit" ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
 	            {mode === "edit" ? t("Save") : t("Add")}
-	          </Button>
+	          </MdButton>
 	        </DialogFooter>
 	      </DialogContent>
 	      <CustomMcpToolDialog
@@ -654,9 +654,9 @@ function CustomMcpToolDialog({
           <div className="min-w-0">
             <DialogTitle>{t("Add custom MCP")}</DialogTitle>
           </div>
-          <Button aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="ghost">
+          <MdButton aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="text">
             <X className="h-4 w-4" />
-          </Button>
+          </MdButton>
         </DialogHeader>
 
         <DialogBody>
@@ -730,13 +730,13 @@ function CustomMcpToolDialog({
         </DialogBody>
 
         <DialogFooter>
-          <Button onClick={onClose} type="button" variant="outline">
+          <MdButton onClick={onClose} type="button" size="sm" variant="outlined">
             {t("Cancel")}
-          </Button>
-          <Button onClick={onSubmit} type="button">
+          </MdButton>
+          <MdButton onClick={onSubmit} type="button" size="sm" variant="filled">
             <Plus className="h-4 w-4" />
             {t("Add")}
-          </Button>
+          </MdButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -854,16 +854,15 @@ function FusionToolsListControl({
                 value={value}
               />
             </div>
-            <Button
+            <MdButton
               aria-label={t("Remove tool")}
               onClick={() => onRemoveTool(index)}
               size="iconSm"
               title={t("Remove tool")}
               type="button"
-              variant="ghost"
-            >
+             variant="text">
               <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            </MdButton>
           </div>
           <FusionToolConfigurationPanel
             draft={draft}
@@ -890,29 +889,26 @@ function FusionToolsListControl({
               value=""
             />
           </div>
-          <Button
+          <MdButton
             aria-label={t("Cancel")}
             onClick={onCancelAddTool}
             size="iconSm"
             title={t("Cancel")}
             type="button"
-            variant="ghost"
-          >
+           variant="text">
             <X className="h-3.5 w-3.5" />
-          </Button>
+          </MdButton>
         </div>
       ) : null}
 
-      <Button
+      <MdButton
         className="justify-start"
         disabled={adding}
         onClick={onAddTool}
-        type="button"
-        variant="outline"
-      >
+        type="button" size="sm" variant="outlined">
         <Plus className="h-4 w-4" />
         {t("Add tool")}
-      </Button>
+      </MdButton>
     </div>
   );
 }
@@ -1238,16 +1234,16 @@ export function InstallExtensionDialog({
           <div className="min-w-0">
             <DialogTitle>{t("Install Extension")}</DialogTitle>
           </div>
-          <Button aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="ghost">
+          <MdButton aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="text">
             <X className="h-4 w-4" />
-          </Button>
+          </MdButton>
         </DialogHeader>
 
         <DialogBody>
           <div className="space-y-3">
             <div className="space-y-2">
               {marketplace.length === 0 ? (
-                <div className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-8 text-center text-[12px] text-muted-foreground">{t("No marketplace extensions")}</div>
+                <div className="rounded-md border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-8 text-center text-[12px] text-muted-foreground">{t("No marketplace extensions")}</div>
               ) : (
                 marketplace.map((entry) => (
                   <button
@@ -1281,18 +1277,18 @@ export function InstallExtensionDialog({
         </DialogBody>
 
         <DialogFooter className="justify-between">
-          <Button onClick={onChooseLocal} type="button" variant="outline">
+          <MdButton onClick={onChooseLocal} type="button" size="sm" variant="outlined">
             <FolderOpen className="h-4 w-4" />
             {t("Choose folder")}
-          </Button>
+          </MdButton>
           <div className="flex items-center gap-2">
-            <Button onClick={onClose} type="button" variant="outline">
+            <MdButton onClick={onClose} type="button" size="sm" variant="outlined">
               {t("Cancel")}
-            </Button>
-            <Button disabled={!canSubmit} onClick={onSubmit} type="button">
+            </MdButton>
+            <MdButton disabled={!canSubmit} onClick={onSubmit} type="button" size="sm" variant="filled">
               <Plus className="h-4 w-4" />
               {t("Install")}
-            </Button>
+            </MdButton>
           </div>
         </DialogFooter>
       </DialogContent>

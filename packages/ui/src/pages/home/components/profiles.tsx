@@ -10,6 +10,7 @@ import {
   copyTextToClipboard, formatRouterRuleCondition, formatRouterRuleTarget, isRoutingRuleDraftSubmittable, normalizeProviderModelSelector, routerRuleTypeLabel, routingRuleFromDraft, type RouterRule, uniqueStrings, validateProfileEnvRows,
   useCallback, useEffect, useMemo, useRef, useState, X
 } from "../shared/index";
+import { MdButton } from "@/components/md3";
 import { PopoverPortal } from "@/components/ui/popover";
 import { Tooltip } from "@/components/ui/tooltip";
 import { ModelMultiSelector, ModelSelector } from "./model-selector";
@@ -73,10 +74,10 @@ export function ProfileView({
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <Button onClick={() => addProfile()} size="sm" type="button">
+              <MdButton onClick={() => addProfile()} size="sm" type="button" variant="filled">
                 <Plus className="h-3.5 w-3.5" />
                 {t("Add profile")}
-              </Button>
+              </MdButton>
             </div>
           </div>
         </CardHeader>
@@ -175,14 +176,13 @@ export function ProfileView({
                     <div className="flex min-w-0 items-center gap-1">
                       {showProfileLaunchActions && openSurfaces.includes("cli") ? (
                         <ProfileActionTooltip label={cliActionTooltip}>
-                          <Button
+                          <MdButton
                             aria-label={`${cliActionTooltip} ${profile.name || t("Profile")}`}
                             disabled={profileActionDisabled}
                             onClick={() => copyProfileCliCommand(index)}
                             size="iconSm"
                             type="button"
-                            variant="subtle"
-                          >
+                           variant="tonal">
                             <AnimatedIconSwap
                               iconKey={cliBusy ? "busy" : "terminal"}
                             >
@@ -192,7 +192,7 @@ export function ProfileView({
                                 <Terminal className="h-3.5 w-3.5" />
                               )}
                             </AnimatedIconSwap>
-                          </Button>
+                          </MdButton>
                         </ProfileActionTooltip>
                       ) : null}
                       {showProfileLaunchActions && openSurfaces.includes("app") ? (
@@ -228,17 +228,16 @@ export function ProfileView({
                     </div>
                     <div className="ml-auto flex shrink-0 items-center gap-1">
                       <ProfileActionTooltip label={t("Edit")}>
-                        <Button
+                        <MdButton
                           aria-label={`${t("Edit")} ${
                             profile.name || t("Profile")
                           }`}
                           onClick={() => editProfile(index)}
                           size="iconSm"
                           type="button"
-                          variant="ghost"
-                        >
+                         variant="text">
                           <Pencil className="h-3.5 w-3.5" />
-                        </Button>
+                        </MdButton>
                       </ProfileActionTooltip>
                       <ProfileActionTooltip label={t("Remove profile")}>
                         <Button
@@ -326,9 +325,9 @@ export function DeleteProfileDialog({
           <div className="min-w-0">
             <DialogTitle>{t("Delete Profile")}</DialogTitle>
           </div>
-          <Button aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="ghost">
+          <MdButton aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="text">
             <X className="h-4 w-4" />
-          </Button>
+          </MdButton>
         </DialogHeader>
 
         <DialogBody>
@@ -350,13 +349,13 @@ export function DeleteProfileDialog({
         </DialogBody>
 
         <DialogFooter>
-          <Button autoFocus onClick={onClose} type="button" variant="outline">
+          <MdButton autoFocus onClick={onClose} type="button" size="sm" variant="outlined">
             {t("Cancel")}
-          </Button>
-          <Button onClick={onConfirm} type="button" variant="destructive">
+          </MdButton>
+          <MdButton onClick={onConfirm} type="button" size="sm" variant="error">
             <Trash2 className="h-4 w-4" />
             {t("Delete")}
-          </Button>
+          </MdButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -426,12 +425,12 @@ export function ProfileOpenDialog({
               <AgentLogo agent={profile.agent} className="h-6 w-6 rounded-[5px]" />
               <div className="min-w-0 flex-1 truncate text-[13px] font-semibold">{profile.name || profile.id}</div>
               {mode === "choose" && surfaces.includes("app") ? (
-                <Button className="shrink-0" disabled={Boolean(busy)} onClick={appRunning ? onStopApp : onChooseApp} size="sm" type="button" variant="outline">
+                <MdButton className="shrink-0" disabled={Boolean(busy)} onClick={appRunning ? onStopApp : onChooseApp} size="sm" type="button" variant="outlined">
 	                  <AnimatedIconSwap iconKey={busy === "app" ? "busy" : appRunning ? "stop" : "play"}>
 	                    {busy === "app" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : appRunning ? <Power className="h-4 w-4" /> : <Play className="h-4 w-4" />}
 	                  </AnimatedIconSwap>
                   {t(appActionLabel)}
-                </Button>
+                </MdButton>
               ) : null}
             </div>
             {mode === "choose" ? (
@@ -461,9 +460,9 @@ export function ProfileOpenDialog({
           </div>
         </DialogBody>
         <DialogFooter>
-          <Button onClick={onClose} type="button" variant="outline">
+          <MdButton onClick={onClose} type="button" size="sm" variant="outlined">
             {t("Close")}
-          </Button>
+          </MdButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -946,7 +945,7 @@ export function AddProfileForm({
           <div className="sm:col-span-2">
             <button
               className={cn(
-                "flex min-h-9 w-full min-w-0 items-center justify-between gap-3 rounded-md border border-border bg-muted/20 px-3 py-2 text-left outline-none transition-colors hover:bg-muted/35 focus-visible:ring-2 focus-visible:ring-ring/25",
+                "flex min-h-9 w-full min-w-0 items-center justify-between gap-3 rounded-md border border-border bg-muted/20 px-3 py-2 text-left outline-none transition-colors duration-[var(--md-sys-motion-duration-short3)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_4%,transparent)] focus-visible:ring-2 focus-visible:ring-ring/25",
                 advancedOpen && "rounded-b-none"
               )}
               onClick={() => setAdvancedOpen((current) => !current)}
@@ -1139,10 +1138,10 @@ function ProfileRoutingSettings({
           <div className="rounded-md border border-border bg-background p-3">
             <div className="flex min-w-0 items-center justify-between gap-3">
               <span className="text-[12px] font-medium">{t("Profile routes")}</span>
-              <Button onClick={openAddRuleDialog} size="sm" type="button" variant="outline">
+              <MdButton onClick={openAddRuleDialog} size="sm" type="button" variant="outlined">
                 <Plus className="h-3.5 w-3.5" />
                 {t("Add")}
-              </Button>
+              </MdButton>
             </div>
             <div className="mt-3 space-y-2 border-t border-border/70 pt-3">
               {draft.routingRules.length === 0 ? (
@@ -1169,12 +1168,12 @@ function ProfileRoutingSettings({
                     </div>
                   </button>
                   <div className="flex shrink-0 items-center gap-1">
-                    <Button aria-label={t("Edit")} onClick={() => openEditRuleDialog(index)} size="iconSm" title={t("Edit")} type="button" variant="ghost">
+                    <MdButton aria-label={t("Edit")} onClick={() => openEditRuleDialog(index)} size="iconSm" title={t("Edit")} type="button" variant="text">
                       <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button aria-label={t("Remove")} onClick={() => removeRule(index)} size="iconSm" title={t("Remove")} type="button" variant="ghost">
+                    </MdButton>
+                    <MdButton aria-label={t("Remove")} onClick={() => removeRule(index)} size="iconSm" title={t("Remove")} type="button" variant="text">
                       <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    </MdButton>
                   </div>
                 </div>
               ))}
@@ -1730,17 +1729,17 @@ export function AddProfileDialog({
         </DialogBody>
         <DialogFooter>
           <div className="flex justify-end gap-2">
-            <Button disabled={submitting} onClick={onClose} type="button" variant="outline">
+            <MdButton disabled={submitting} onClick={onClose} type="button" size="sm" variant="outlined">
               {t("Cancel")}
-            </Button>
-            <Button disabled={!canSubmit || submitting} onClick={() => void onSubmit()} type="button">
+            </MdButton>
+            <MdButton disabled={!canSubmit || submitting} onClick={() => void onSubmit()} type="button" size="sm" variant="filled">
               {submitting || mode === "add" ? (
                 <AnimatedIconSwap iconKey={submitting ? "submitting" : "add"}>
                   {submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 </AnimatedIconSwap>
               ) : null}
               {mode === "edit" ? t("Save") : t("Add")}
-            </Button>
+            </MdButton>
           </div>
         </DialogFooter>
       </DialogContent>

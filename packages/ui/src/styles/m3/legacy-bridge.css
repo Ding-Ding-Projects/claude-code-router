@@ -1,0 +1,90 @@
+/*
+ * Material 3 bridge for the home surface.
+ *
+ * The home pages style themselves through Tailwind semantic utilities
+ * (bg-background, text-muted-foreground, border-border, ...) that resolve from
+ * the legacy shadcn-era custom properties declared in styles/globals.css.
+ * Rather than rewriting thousands of utility class names lane by lane, this
+ * bridge re-points those variables at the Material 3 tokens from tokens.css so
+ * every existing utility renders with genuine M3 color roles, shape and
+ * elevation.
+ *
+ * Scope: the class is applied on <body> by pages/home/index.html only, so the
+ * browser and tray entries keep their pre-M3 appearance until their own lanes
+ * convert. Portals render inside body, dialogs are in-tree, so everything the
+ * home page mounts is covered.
+ *
+ * Themes: the aliases below reference --md-sys-color-* directly, so they follow
+ * html[data-md-theme] exclusively. The home App mirrors its resolved
+ * config.theme onto that attribute (see applyResolvedTheme), keeping a single
+ * source of truth while using the existing data-md-theme mechanism.
+ */
+
+.md-home-surface {
+  /* Core color roles */
+  --background: var(--md-sys-color-background);
+  --foreground: var(--md-sys-color-on-background);
+  --card: var(--md-sys-color-surface-container-lowest);
+  --card-foreground: var(--md-sys-color-on-surface);
+  --popover: var(--md-sys-color-surface-container);
+  --popover-foreground: var(--md-sys-color-on-surface);
+  --primary: var(--md-sys-color-primary);
+  --primary-foreground: var(--md-sys-color-on-primary);
+  --secondary: var(--md-sys-color-secondary-container);
+  --secondary-foreground: var(--md-sys-color-on-secondary-container);
+  --muted: var(--md-sys-color-surface-container-high);
+  --muted-foreground: var(--md-sys-color-on-surface-variant);
+  --accent: var(--md-sys-color-secondary-container);
+  --accent-foreground: var(--md-sys-color-on-secondary-container);
+  --destructive: var(--md-sys-color-error);
+  --destructive-foreground: var(--md-sys-color-on-error);
+  --border: var(--md-sys-color-outline-variant);
+  --input: var(--md-sys-color-outline-variant);
+  --ring: var(--md-sys-color-primary);
+  --sidebar: var(--md-sys-color-surface-container-low);
+  --sidebar-foreground: var(--md-sys-color-on-surface-variant);
+
+  /* Shape: M3 corner-medium drives the themed rounded-sm/md/lg scale. */
+  --radius: var(--md-sys-shape-corner-medium);
+
+  /*
+   * Network inspector neutrals. The status colours (active amber, complete
+   * green, error red) stay as functional data colours and are intentionally
+   * not bridged.
+   */
+  --network-bg: var(--md-sys-color-background);
+  --network-panel: var(--md-sys-color-surface-container-lowest);
+  --network-panel-alt: var(--md-sys-color-surface-container-high);
+  --network-panel-muted: var(--md-sys-color-surface-container);
+  --network-row: var(--md-sys-color-surface-container-lowest);
+  --network-row-alt: var(--md-sys-color-surface-container-low);
+  --network-row-hover: color-mix(in srgb, var(--md-sys-color-primary) 6%, var(--md-sys-color-surface-container-low));
+  --network-row-selected: color-mix(in srgb, var(--md-sys-color-primary) 14%, var(--md-sys-color-surface-container-low));
+  --network-border: var(--md-sys-color-outline-variant);
+  --network-border-strong: var(--md-sys-color-outline);
+  --network-text: var(--md-sys-color-on-surface);
+  --network-text-muted: var(--md-sys-color-on-surface-variant);
+  --network-text-subtle: var(--md-sys-color-outline);
+  --network-code: var(--md-sys-color-on-surface);
+  --network-accent: var(--md-sys-color-primary);
+  --network-accent-contrast: var(--md-sys-color-on-primary);
+  --network-control: var(--md-sys-color-surface-container-lowest);
+  --network-control-hover: var(--md-sys-color-surface-container-high);
+  --network-control-border: var(--md-sys-color-outline-variant);
+  --network-client-icon-bg: var(--md-sys-color-secondary-container);
+  --network-client-icon-text: var(--md-sys-color-on-secondary-container);
+}
+
+/* Elevation: swap the hand-tuned card shadows for the M3 elevation levels,
+   scoped to the home surface because popover/tooltip share these utilities. */
+.md-home-surface .shadow-card {
+  box-shadow: var(--md-elevation-level1);
+}
+
+.md-home-surface .shadow-card-hover {
+  box-shadow: var(--md-elevation-level2);
+}
+
+.md-home-surface .shadow-card-elevated {
+  box-shadow: var(--md-elevation-level3);
+}

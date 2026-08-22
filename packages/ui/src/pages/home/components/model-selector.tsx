@@ -3,7 +3,6 @@ import {
   AnimatedPopover,
   AnimatePresence,
   Badge,
-  Button,
   Check,
   Checkbox,
   ChevronDown,
@@ -29,6 +28,7 @@ import {
   X,
   type VirtualModelProfileConfig
 } from "../shared/index";
+import { MdButton } from "@/components/md3";
 import { PopoverPortal } from "@/components/ui/popover";
 
 const useClientLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -180,9 +180,9 @@ export function ModelSelector({
     <div className="relative min-w-0" ref={rootRef}>
       <div
         className={cn(
-          "flex h-10 w-full min-w-0 items-center gap-2 rounded-md border border-input bg-background px-3 text-left text-[12px] shadow-[inset_0_1px_1px_rgba(0,0,0,0.03)] outline-none transition-[background-color,border-color,box-shadow,color] hover:border-muted-foreground/45 focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-ring/25",
-          open && "border-ring/35 bg-muted/40",
-          !value.trim() && "text-muted-foreground"
+          "md-type-body-medium flex h-10 w-full min-w-0 items-center gap-2 rounded-[var(--md-sys-shape-corner-extra-small)] border border-[var(--md-sys-color-outline)] bg-transparent px-3 text-left outline-none transition-colors duration-[var(--md-sys-motion-duration-short3)] hover:border-[var(--md-sys-color-on-surface)] focus-visible:border-[var(--md-sys-color-primary)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--md-sys-color-primary)]",
+          open && "border-[var(--md-sys-color-primary)] bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_4%,transparent)]",
+          !value.trim() && "text-[var(--md-sys-color-on-surface-variant)]"
         )}
       >
         <button
@@ -197,7 +197,7 @@ export function ModelSelector({
         {value.trim() ? (
           <button
             aria-label={t("Clear")}
-            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-[5px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/25"
+            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--md-sys-color-on-surface-variant)] transition-colors duration-[var(--md-sys-motion-duration-short3)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,transparent)] hover:text-[var(--md-sys-color-on-surface)] focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)]"
             onClick={clearValue}
             title={t("Clear")}
             type="button"
@@ -207,7 +207,7 @@ export function ModelSelector({
         ) : null}
         <button
           aria-label={open ? t("Collapse") : t("Expand")}
-          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-[5px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/25"
+          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--md-sys-color-on-surface-variant)] transition-colors duration-[var(--md-sys-motion-duration-short3)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,transparent)] hover:text-[var(--md-sys-color-on-surface)] focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)]"
           onClick={openSelector}
           title={open ? t("Collapse") : t("Expand")}
           type="button"
@@ -245,25 +245,25 @@ export function ModelSelector({
                 </div>
 
                 {providerOptions.length === 0 ? (
-                  <div className="mt-2 rounded-md border border-dashed border-border bg-muted/30 px-3 py-8 text-center text-[12px] text-muted-foreground">
+                  <div className="md-type-body-medium mt-2 rounded-[var(--md-sys-shape-corner-small)] border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-8 text-center text-[var(--md-sys-color-on-surface-variant)]">
                     {t("No models configured")}
                   </div>
                 ) : (
                   <div
-                    className="mt-2 grid grid-cols-[minmax(112px,0.38fr)_minmax(0,1fr)] overflow-hidden rounded-md border border-border"
+                    className="mt-2 grid grid-cols-[minmax(112px,0.38fr)_minmax(0,1fr)] overflow-hidden rounded-[var(--md-sys-shape-corner-small)] border border-[var(--md-sys-color-outline-variant)]"
                     style={{ height: `${popoverLayout?.gridHeight ?? 220}px` }}
                   >
-                    <div className="min-w-0 overflow-auto border-r border-border bg-muted/30 p-1">
+                    <div className="min-w-0 overflow-auto border-r border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] p-1">
                       {filteredProviders.length === 0 ? (
-                        <div className="px-2 py-6 text-center text-[11px] text-muted-foreground">{t("No matching providers")}</div>
+                        <div className="md-type-body-small px-2 py-6 text-center text-[var(--md-sys-color-on-surface-variant)]">{t("No matching providers")}</div>
                       ) : null}
                       {filteredProviders.map((provider) => {
                         const active = provider.name === activeProvider?.name;
                         return (
                           <button
                             className={cn(
-                              "flex h-9 w-full min-w-0 items-center gap-2 rounded-[5px] px-2 text-left text-[12px] outline-none transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-ring/25",
-                              active && "bg-background text-primary"
+                              "md-type-body-medium flex h-9 w-full min-w-0 items-center gap-2 rounded-full px-3 text-left outline-none transition-colors duration-[var(--md-sys-motion-duration-short3)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,transparent)] focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)]",
+                              active && "bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]"
                             )}
                             key={provider.name}
                             onClick={() => setActiveProviderName(provider.name)}
@@ -275,12 +275,12 @@ export function ModelSelector({
                         );
                       })}
                     </div>
-                    <div className="min-w-0 overflow-auto bg-background p-1">
+                    <div className="min-w-0 overflow-auto bg-[var(--md-sys-color-surface-container-low)] p-1">
                       {!activeProvider ? (
-                        <div className="px-2 py-10 text-center text-[12px] text-muted-foreground">{t("No matching models")}</div>
+                        <div className="md-type-body-medium px-2 py-10 text-center text-[var(--md-sys-color-on-surface-variant)]">{t("No matching models")}</div>
                       ) : null}
                       {activeProvider && filteredModels.length === 0 ? (
-                        <div className="px-2 py-10 text-center text-[12px] text-muted-foreground">{t("No matching models")}</div>
+                        <div className="md-type-body-medium px-2 py-10 text-center text-[var(--md-sys-color-on-surface-variant)]">{t("No matching models")}</div>
                       ) : null}
                       {activeProvider && filteredModels.map((model) => {
                         const selected = parsedValue.provider === activeProvider.name && parsedValue.model === model;
@@ -288,8 +288,8 @@ export function ModelSelector({
                         return (
                           <button
                             className={cn(
-                              "flex h-9 w-full min-w-0 items-center gap-2 rounded-[5px] px-2 text-left text-[12px] outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/25",
-                              selected && "bg-primary/10 text-primary"
+                              "md-type-body-medium flex h-9 w-full min-w-0 items-center gap-2 rounded-full px-3 text-left outline-none transition-colors duration-[var(--md-sys-motion-duration-short3)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,transparent)] focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)]",
+                              selected && "bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]"
                             )}
                             key={`${activeProvider.name}/${model}`}
                             onClick={() => chooseModel(activeProvider.name, model)}
@@ -369,7 +369,7 @@ export function ModelMultiSelector({
   }
 
   return (
-    <div className="rounded-md border border-input bg-card">
+    <div className="rounded-[var(--md-sys-shape-corner-small)] border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-lowest)]">
       <div className="flex flex-wrap items-center gap-2 border-b border-border p-2">
         <div className="relative min-w-[180px] flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -381,16 +381,16 @@ export function ModelMultiSelector({
             value={query}
           />
         </div>
-        <Button disabled={models.length === 0} onClick={selectVisibleModels} size="sm" type="button" variant="outline">
+        <MdButton disabled={models.length === 0} onClick={selectVisibleModels} size="sm" type="button" variant="outlined">
           {t("All")}
-        </Button>
-        <Button disabled={!hasOptionalSelection} onClick={clearOptionalModels} size="sm" type="button" variant="outline">
+        </MdButton>
+        <MdButton disabled={!hasOptionalSelection} onClick={clearOptionalModels} size="sm" type="button" variant="outlined">
           {t("Clear")}
-        </Button>
+        </MdButton>
       </div>
       <div className="max-h-[220px] overflow-auto p-2">
         {models.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border bg-muted/30 px-3 py-6 text-center text-[12px] text-muted-foreground">
+          <div className="md-type-body-medium rounded-[var(--md-sys-shape-corner-small)] border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-6 text-center text-[var(--md-sys-color-on-surface-variant)]">
             {t(providerOptions.length === 0 ? "No models configured" : "No matching models")}
           </div>
         ) : null}
@@ -402,8 +402,8 @@ export function ModelMultiSelector({
             return (
               <Label
                 className={cn(
-                  "flex h-9 min-w-0 cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-2 text-left text-[12px] transition-colors hover:bg-muted",
-                  checked && "border-primary bg-accent",
+                  "md-type-body-medium flex h-9 min-w-0 cursor-pointer items-center gap-2 rounded-[var(--md-sys-shape-corner-small)] border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-lowest)] px-2 text-left transition-colors duration-[var(--md-sys-motion-duration-short3)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_4%,transparent)]",
+                  checked && "border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-secondary-container)]",
                   locked && "cursor-not-allowed opacity-75 hover:bg-accent"
                 )}
                 key={model.value}

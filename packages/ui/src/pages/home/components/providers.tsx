@@ -19,6 +19,7 @@ import {
   translateProbeProtocolMessage, Trash2, uniqueProviderName, uniqueProviderProtocols, useAppErrorText, useAppText, useEffect, useLayoutEffect, useMemo,
   useRef, useState, X, isGatewayProviderEnabled, isPlainRecord
 } from "../shared/index";
+import { MdButton } from "@/components/md3";
 import { PopoverPortal } from "@/components/ui/popover";
 import { Tooltip, TooltipPortal } from "@/components/ui/tooltip";
 import { providerUrlWithDefaultScheme } from "@ccr/core/providers/url";
@@ -110,21 +111,21 @@ export function ProvidersView({ accountSnapshots, addProvider, editProvider, not
               value={query}
             />
           </div>
-          <Button aria-label={t("Add provider")} onClick={addProvider} title={t("Add provider")} type="button">
+          <MdButton aria-label={t("Add provider")} onClick={addProvider} title={t("Add provider")} type="button" size="sm" variant="filled">
             <Plus className="h-4 w-4" />
             {t("Add")}
-          </Button>
+          </MdButton>
         </CardHeader>
         <CardContent className="min-h-0 flex-1 overflow-auto p-0">
           {providers.length === 0 ? (
-            <div className="m-4 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-10 text-center">
+            <div className="m-4 rounded-lg border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-10 text-center">
               <Layers3 className="mx-auto mb-2 h-7 w-7 text-muted-foreground/40" />
               <div className="text-[12px] text-muted-foreground">{t("No providers configured")}</div>
               <div className="mt-1 text-[11px] text-muted-foreground/60">{t("Click Add to create one")}</div>
             </div>
           ) : null}
           {providers.length > 0 && visibleProviders.length === 0 ? (
-            <div className="m-4 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-10 text-center text-[12px] text-muted-foreground">{t("No matching providers")}</div>
+            <div className="m-4 rounded-lg border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-10 text-center text-[12px] text-muted-foreground">{t("No matching providers")}</div>
           ) : null}
           {visibleProviders.length > 0 ? (
             <>
@@ -153,7 +154,7 @@ export function ProvidersView({ accountSnapshots, addProvider, editProvider, not
               </div>
               <div className="hidden min-w-0 md:block">
                 <div className="min-w-[1080px]">
-                  <div className="sticky top-0 z-10 grid h-10 grid-cols-[minmax(260px,1fr)_80px_minmax(150px,0.65fr)_minmax(260px,1fr)_132px] items-center gap-3 border-b border-border/60 bg-muted/95 px-4 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  <div className="sticky top-0 z-10 grid h-10 grid-cols-[minmax(260px,1fr)_80px_minmax(150px,0.65fr)_minmax(260px,1fr)_132px] md-type-label-medium items-center gap-3 border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-4 uppercase tracking-wide text-[var(--md-sys-color-on-surface-variant)]">
                     <div className="truncate">{t("Provider")}</div>
                     <div className="truncate">{t("Models")}</div>
                     <div className="truncate">{t("Account Usage")}</div>
@@ -241,7 +242,7 @@ export function ProvidersView({ accountSnapshots, addProvider, editProvider, not
                                     title={t(providerEnabled ? "Enabled" : "Disabled")}
                                   />
                                 </div>
-                                <Button
+                                <MdButton
                                   aria-label={`${t("Edit")} ${provider.name || t("provider")}`}
                                   onClick={(event) => {
                                     event.stopPropagation();
@@ -250,11 +251,10 @@ export function ProvidersView({ accountSnapshots, addProvider, editProvider, not
                                   size="iconSm"
                                   title={t("Edit provider")}
                                   type="button"
-                                  variant="ghost"
-                                >
+                                 variant="text">
                                   <Pencil className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
+                                </MdButton>
+                                <MdButton
                                   aria-label={`${t("Remove")} ${provider.name || t("provider")}`}
                                   onClick={(event) => {
                                     event.stopPropagation();
@@ -263,10 +263,9 @@ export function ProvidersView({ accountSnapshots, addProvider, editProvider, not
                                   size="iconSm"
                                   title={t("Remove provider")}
                                   type="button"
-                                  variant="ghost"
-                                >
+                                 variant="text">
                                   <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
+                                </MdButton>
                               </div>
                             </div>
                             <AnimatePresence initial={false}>
@@ -370,26 +369,24 @@ function ProviderMobileCard({
               onChange={(enabled) => onSetEnabled(index, enabled)}
               title={t(providerEnabled ? "Enabled" : "Disabled")}
             />
-            <Button
+            <MdButton
               aria-label={`${t("Edit")} ${provider.name || t("provider")}`}
               onClick={() => onEdit(index)}
               size="iconSm"
               title={t("Edit provider")}
               type="button"
-              variant="ghost"
-            >
+             variant="text">
               <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button
+            </MdButton>
+            <MdButton
               aria-label={`${t("Remove")} ${provider.name || t("provider")}`}
               onClick={() => onRemove(index)}
               size="iconSm"
               title={t("Remove provider")}
               type="button"
-              variant="ghost"
-            >
+             variant="text">
               <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            </MdButton>
           </div>
         </div>
 
@@ -528,18 +525,18 @@ export function ModelsView({
         </CardHeader>
         <CardContent className="min-h-0 flex-1 overflow-auto p-0">
           {rows.length === 0 ? (
-            <div className="m-4 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-10 text-center">
+            <div className="m-4 rounded-lg border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-10 text-center">
               <Box className="mx-auto mb-2 h-7 w-7 text-muted-foreground/40" />
               <div className="text-[12px] text-muted-foreground">{t("No models available")}</div>
             </div>
           ) : null}
           {rows.length > 0 && visibleRows.length === 0 ? (
-            <div className="m-4 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-10 text-center text-[12px] text-muted-foreground">{t("No matching models")}</div>
+            <div className="m-4 rounded-lg border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-10 text-center text-[12px] text-muted-foreground">{t("No matching models")}</div>
           ) : null}
           {visibleRows.length > 0 ? (
             <div className="min-w-0">
               <div className="min-w-[680px]">
-                <div className="sticky top-0 z-10 grid h-10 grid-cols-[minmax(0,1fr)_minmax(260px,1.5fr)] items-center gap-3 border-b border-border/60 bg-muted/95 px-4 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                <div className="sticky top-0 z-10 grid h-10 grid-cols-[minmax(0,1fr)_minmax(260px,1.5fr)] md-type-label-medium items-center gap-3 border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-4 uppercase tracking-wide text-[var(--md-sys-color-on-surface-variant)]">
                   <div className="truncate">{t("Model")}</div>
                   <div className="truncate">{t("Description")}</div>
                 </div>
@@ -547,7 +544,7 @@ export function ModelsView({
                   <AnimatePresence initial={false}>
                     {visibleRows.map((row) => (
                       <AnimatedListItem
-                        className="grid min-h-[60px] grid-cols-[minmax(0,1fr)_minmax(260px,1.5fr)] items-start gap-3 px-4 py-2.5 transition-colors hover:bg-muted/35"
+                        className="grid min-h-[60px] grid-cols-[minmax(0,1fr)_minmax(260px,1.5fr)] items-start gap-3 px-4 py-2.5 transition-colors duration-[var(--md-sys-motion-duration-short3)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_4%,transparent)]"
                         key={row.key}
                       >
                         <div className="min-w-0">
@@ -648,12 +645,12 @@ function ModelCatalogDescriptionDialog({
           </Field>
         </DialogBody>
         <DialogFooter>
-          <Button onClick={onClose} type="button" variant="outline">
+          <MdButton onClick={onClose} type="button" size="sm" variant="outlined">
             {t("Cancel")}
-          </Button>
-          <Button disabled={draft.trim() === (target?.description ?? "").trim()} onClick={onSave} type="button">
+          </MdButton>
+          <MdButton disabled={draft.trim() === (target?.description ?? "").trim()} onClick={onSave} type="button" size="sm" variant="filled">
             {t("Save")}
-          </Button>
+          </MdButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -718,9 +715,9 @@ export function DeleteProviderDialog({
           <div className="min-w-0">
             <DialogTitle>{t("Delete Provider")}</DialogTitle>
           </div>
-          <Button aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="ghost">
+          <MdButton aria-label={t("Close dialog")} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="text">
             <X className="h-4 w-4" />
-          </Button>
+          </MdButton>
         </DialogHeader>
 
         <DialogBody>
@@ -742,13 +739,13 @@ export function DeleteProviderDialog({
         </DialogBody>
 
         <DialogFooter>
-          <Button autoFocus onClick={onClose} type="button" variant="outline">
+          <MdButton autoFocus onClick={onClose} type="button" size="sm" variant="outlined">
             {t("Cancel")}
-          </Button>
-          <Button onClick={onConfirm} type="button" variant="destructive">
+          </MdButton>
+          <MdButton onClick={onConfirm} type="button" size="sm" variant="error">
             <Trash2 className="h-4 w-4" />
             {t("Delete")}
-          </Button>
+          </MdButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -791,9 +788,9 @@ export function ProviderDeepLinkDialog({
           <div className="min-w-0">
             <DialogTitle>{provider ? t("Import Provider") : manifest ? t("Import Provider Manifest") : t("Provider link failed")}</DialogTitle>
           </div>
-          <Button aria-label={t("Close dialog")} disabled={busy} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="ghost">
+          <MdButton aria-label={t("Close dialog")} disabled={busy} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="text">
             <X className="h-4 w-4" />
-          </Button>
+          </MdButton>
         </DialogHeader>
 
         <DialogBody>
@@ -896,16 +893,16 @@ export function ProviderDeepLinkDialog({
         </DialogBody>
 
         <DialogFooter>
-          <Button disabled={busy} onClick={onClose} type="button" variant="outline">
+          <MdButton disabled={busy} onClick={onClose} type="button" size="sm" variant="outlined">
             {t("Cancel")}
-          </Button>
+          </MdButton>
           {provider || manifest ? (
-            <Button disabled={actionLoading} onClick={() => void onSubmit()} type="button">
+            <MdButton disabled={actionLoading} onClick={() => void onSubmit()} type="button" size="sm" variant="filled">
               <AnimatedIconSwap iconKey={actionLoading ? "busy" : "plus"}>
                 {actionLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               </AnimatedIconSwap>
               {actionLoading ? t("Loading") : provider ? t("Import") : t("Fetch manifest")}
-            </Button>
+            </MdButton>
           ) : null}
         </DialogFooter>
       </DialogContent>
@@ -1092,7 +1089,7 @@ function ProviderPresetCombobox({
           ) : null}
         </div>
         {selectedExternalUrl ? (
-          <Button
+          <MdButton
             aria-label={t("Open provider website")}
             onKeyDown={(event) => {
               event.stopPropagation();
@@ -1107,10 +1104,9 @@ function ProviderPresetCombobox({
             size="iconSm"
             title={t("Open provider website")}
             type="button"
-            variant="ghost"
-          >
+           variant="text">
             <ExternalLink className="h-4 w-4" />
-          </Button>
+          </MdButton>
         ) : null}
         <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
       </div>
@@ -1250,16 +1246,15 @@ function ProviderImportHeader({
         <div className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground" title={baseUrl}>{baseUrl}</div>
       </div>
       {platformUrl ? (
-        <Button
+        <MdButton
           aria-label={t("Open provider website")}
           onClick={openPlatform}
           size="iconSm"
           title={t("Open provider website")}
           type="button"
-          variant="ghost"
-        >
+         variant="text">
           <ExternalLink className="h-4 w-4" />
-        </Button>
+        </MdButton>
       ) : null}
     </div>
   );
@@ -2739,7 +2734,7 @@ function ProviderCredentialSettings({
       </div>
 
       {draft.credentials.length === 0 ? (
-        <div className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-4 text-center text-[12px] text-muted-foreground">
+        <div className="rounded-md border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-4 text-center text-[12px] text-muted-foreground">
           {t("No provider credentials configured")}
         </div>
       ) : (
@@ -2807,9 +2802,9 @@ function ProviderCredentialRow({
           />
         </Field>
         <div className="flex items-end justify-end">
-          <Button aria-label={`${t("Remove")} ${label}`} onClick={onRemove} size="iconSm" title={t("Remove")} type="button" variant="ghost">
+          <MdButton aria-label={`${t("Remove")} ${label}`} onClick={onRemove} size="iconSm" title={t("Remove")} type="button" variant="text">
             <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          </MdButton>
         </div>
       </div>
       <Button
@@ -3079,14 +3074,14 @@ function ProviderUsageSettings({
                         value={draft.usageBrowserLoginUrl}
                         onChange={(event) => onChange({ usageBrowserLoginUrl: event.target.value })}
                       />
-                      <Button size="sm" type="button" variant="outline" onClick={() => void openBrowserLogin()}>
+                      <MdButton size="sm" type="button" onClick={() => void openBrowserLogin()} variant="outlined">
                         <KeyRound className="h-3.5 w-3.5" />
                         {t("Open login browser")}
-                      </Button>
-                      <Button disabled={chromeImportLoading} size="sm" type="button" variant="outline" onClick={() => void startChromeImportFromBrowserConfig()}>
+                      </MdButton>
+                      <MdButton disabled={chromeImportLoading} size="sm" type="button" onClick={() => void startChromeImportFromBrowserConfig()} variant="outlined">
                         {chromeImportLoading ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <KeyRound className="h-3.5 w-3.5" />}
                         {t("Import from Chrome")}
-                      </Button>
+                      </MdButton>
                     </div>
                   </Field>
                   <Field label={t("Browser storage origin")}>
@@ -3139,12 +3134,12 @@ function ProviderUsageSettings({
                         ) : null}
                         {chromeImportJob?.status === "pending" ? (
                           <>
-                            <Button size="sm" type="button" variant="outline" onClick={() => void copyChromeImportUrl("import")}>
+                            <MdButton size="sm" type="button" onClick={() => void copyChromeImportUrl("import")} variant="outlined">
                               {t("Copy import URL")}
-                            </Button>
-                            <Button size="sm" type="button" variant="outline" onClick={() => void copyChromeImportUrl("confirm")}>
+                            </MdButton>
+                            <MdButton size="sm" type="button" onClick={() => void copyChromeImportUrl("confirm")} variant="outlined">
                               {t("Copy page URL")}
-                            </Button>
+                            </MdButton>
                           </>
                         ) : null}
                       </div>
@@ -3201,12 +3196,12 @@ function ProviderUsageSettings({
               </Field>
 
               <div className="sm:col-span-2 flex flex-wrap items-center gap-2">
-                <Button disabled={testLoading} onClick={() => void testUsageRequest()} size="sm" type="button" variant="outline">
+                <MdButton disabled={testLoading} onClick={() => void testUsageRequest()} size="sm" type="button" variant="outlined">
                   <AnimatedIconSwap iconKey={testLoading ? "testing" : "check"}>
                     {testLoading ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
                   </AnimatedIconSwap>
                   {t(draft.accountMode === "browser" ? "Test browser request" : "Test usage request")}
-                </Button>
+                </MdButton>
                 {testResult ? <Badge variant={testResult.meters.length > 0 ? "success" : "outline"}>{testResult.meters.length} {t("meters")}</Badge> : null}
               </div>
 
@@ -3245,18 +3240,18 @@ function ProviderUsageSettings({
                       onChange={(event) => setNewApiUserId(event.target.value)}
                     />
                   </div>
-                  <Button size="sm" type="button" variant="outline" onClick={insertNewApiUserBalanceTemplate}>
+                  <MdButton size="sm" type="button" onClick={insertNewApiUserBalanceTemplate} variant="outlined">
                     {t("Insert New API user balance")}
-                  </Button>
+                  </MdButton>
                 </div>
               ) : null}
               <div className="flex flex-wrap items-center gap-2">
-                <Button disabled={testLoading} onClick={() => void testUsageRequest()} size="sm" type="button" variant="outline">
+                <MdButton disabled={testLoading} onClick={() => void testUsageRequest()} size="sm" type="button" variant="outlined">
                   <AnimatedIconSwap iconKey={testLoading ? "testing" : "check"}>
                     {testLoading ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
                   </AnimatedIconSwap>
                   {t("Test first JSON connector")}
-                </Button>
+                </MdButton>
                 {testResult ? <Badge variant={testResult.meters.length > 0 ? "success" : "outline"}>{testResult.meters.length} {t("meters")}</Badge> : null}
               </div>
               {testResult ? (
@@ -3566,9 +3561,9 @@ export function AddProviderDialog({
         >
           <DialogHeader className={cn("h-11", wizardMode && "border-b-0")}>
             <DialogTitle>{title ?? (mode === "edit" ? t("Edit Provider") : t("Add Provider"))}</DialogTitle>
-            <Button aria-label={t("Close dialog")} disabled={submitting} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="ghost">
+            <MdButton aria-label={t("Close dialog")} disabled={submitting} onClick={onClose} size="iconSm" title={t("Close")} type="button" variant="text">
               <X className="h-4 w-4" />
-            </Button>
+            </MdButton>
           </DialogHeader>
           {wizardMode ? (
             <ProviderSetupProgress
@@ -3606,24 +3601,24 @@ export function AddProviderDialog({
 
           <DialogFooter className={cn("px-5 py-3", wizardMode && previousStep && "justify-between")}>
             {wizardMode && previousStep ? (
-              <Button disabled={submitting} onClick={() => setActiveStep(previousStep)} type="button" variant="outline">
+              <MdButton disabled={submitting} onClick={() => setActiveStep(previousStep)} type="button" size="sm" variant="outlined">
                 <ChevronLeft className="h-4 w-4" />
                 {t("Previous")}
-              </Button>
+              </MdButton>
             ) : null}
             <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
               {wizardMode && nextStep ? (
-                <Button disabled={nextDisabled} onClick={goToNextStep} type="button">
+                <MdButton disabled={nextDisabled} onClick={goToNextStep} type="button" size="sm" variant="filled">
                   {t("Next")}
                   <ChevronRight className="h-4 w-4" />
-                </Button>
+                </MdButton>
               ) : (
-                <Button disabled={submitDisabled} onClick={() => void submit()} type="button">
+                <MdButton disabled={submitDisabled} onClick={() => void submit()} type="button" size="sm" variant="filled">
                   <AnimatedIconSwap iconKey={submitLoading ? "loading" : finalWizardSubmit ? "done" : mode}>
                     {submitLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : mode === "edit" || finalWizardSubmit ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                   </AnimatedIconSwap>
                   {submitLoading ? t("Loading") : submitLabel ?? (finalWizardSubmit ? t("Done") : mode === "edit" ? t("Save") : t("Add"))}
-                </Button>
+                </MdButton>
               )}
             </div>
           </DialogFooter>
@@ -3689,17 +3684,16 @@ export function ProviderConnectivityCheckDialog({
           <div className="min-w-0">
             <DialogTitle>{t("Check Connection")}</DialogTitle>
           </div>
-          <Button
+          <MdButton
             aria-label={t("Close dialog")}
             disabled={busy}
             onClick={onClose}
             size="iconSm"
             title={t("Close")}
             type="button"
-            variant="ghost"
-          >
+           variant="text">
             <X className="h-4 w-4" />
-          </Button>
+          </MdButton>
         </DialogHeader>
         <DialogBody>
           <div className="space-y-3">
@@ -3750,15 +3744,15 @@ export function ProviderConnectivityCheckDialog({
           </div>
         </DialogBody>
         <DialogFooter>
-          <Button disabled={busy} onClick={onClose} type="button" variant="outline">
+          <MdButton disabled={busy} onClick={onClose} type="button" size="sm" variant="outlined">
             {result ? t("Close") : t("Cancel")}
-          </Button>
-          <Button disabled={running || selection.length === 0} onClick={() => void confirmCheck()} type="button">
+          </MdButton>
+          <MdButton disabled={running || selection.length === 0} onClick={() => void confirmCheck()} type="button" size="sm" variant="filled">
             <AnimatedIconSwap iconKey={running ? "checking" : "start"}>
               {running ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
             </AnimatedIconSwap>
             {t("Start check")}
-          </Button>
+          </MdButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
