@@ -38,25 +38,46 @@ function firstTitle(md) {
   return m ? m[1].trim() : 'Untitled';
 }
 
-/** "Status: implementation in review." extracted from the leading notice quote. */
+/** "implementation in review" — the short status inside the leading notice quote. */
 function firstStatus(md) {
-  const m = md.match(/^>\s*(?:\*\*)?Status:?\*?\*?:?\s*(.+)$/im);
+  const m = md.match(/\*\*\s*Status:?\s*:?\s*([^*]+?)\s*\*\*/) || md.match(/^>\s*(?:\*\*)?Status:?\s*:?\s*(.+)$/im);
   if (!m) return '';
-  return m[1].replace(/\*\*/g, '').replace(/\.$/, '').trim();
+  return m[1].replace(/\.+$/, '').trim();
 }
 
-/** Plain-text summary: first paragraph of the Behavior section, inline markers stripped. */
-function firstSummary(md) {
-  const sec = md.match(/^##\s+Behavior\s*$([\s\S]*?)(?=^##\s|\s*$)/im);
-  let para = '';
-  if (sec) {
-    para = sec[1].split(/\n\s*\n/).find((p) => p.trim() && !p.trim().startsWith('>')) || '';
+/** Body of one "## Section" (up to the next same-or-higher heading), line-based so quotes never bleed across sections. */
+function sectionBody(md, name) {
+  const lines = String(md).split(/\r?\n/);
+  const header = new RegExp('^##\\s+' + name + '\\s*$', 'i');
+  const out = [];
+  let on = false;
+  for (const line of lines) {
+    if (/^##(?!#)/.test(line)) {
+      on = header.test(line.trim());
+      continue;
+    }
+    if (on) out.push(line);
   }
-  if (!para) para = md.split(/\n\s*\n/).find((p) => p.trim() && !p.trim().startsWith('#')) || '';
+  return out.join('\n');
+}
+
+/** Plain-text summary: first prose paragraph of the Behavior section, inline markers stripped. */
+function firstSummary(md) {
+  const body = sectionBody(md, 'Behavior');
+  let para = body
+    .split(/\n\s*\n/)
+    .map((p) => p.replace(/\s+/g, ' ').trim())
+    .find((p) => p && !p.startsWith('>') && !/^[-*+]\s/.test(p)) || '';
+  if (!para) {
+    para = md
+      .split(/\n\s*\n/)
+      .map((p) => p.replace(/\s+/g, ' ').trim())
+      .find((p) => p && !p.startsWith('#') && !p.startsWith('>')) || '';
+  }
   const text = para
     .replace(/`([^`]*)`/g, '$1')
     .replace(/\*\*([^*]*)\*\*/g, '$1')
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]*)\]\(([^)]*)\)/g, '$1')
     .replace(/\s+/g, ' ')
     .trim();
   if (text.length <= 240) return text;
