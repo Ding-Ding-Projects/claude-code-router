@@ -77,6 +77,16 @@ export function isStreamingRequestBody(body: Buffer | undefined): boolean {
   return parseJsonObjectSafe(body)?.stream === true;
 }
 
+const geminiStreamingPathPattern = /\/v1(?:beta)?\/models\/[^/]+:streamgeneratecontent$/i;
+
+/**
+ * Gemini requests stream by path suffix (:streamGenerateContent) instead of a
+ * stream:true body flag, so streaming detection has to recognize the path too.
+ */
+export function isStreamingRequestPath(path: string | undefined): boolean {
+  return Boolean(path && geminiStreamingPathPattern.test(path.trim()));
+}
+
 const anthropicWaitingKeepAliveChunk = 'event: ping\ndata: {"type":"ping"}\n\n';
 
 /**
@@ -94,6 +104,42 @@ export function waitingStreamContentType(): string {
 }
 
 /**
+ * Terminal SSE frame for a failure that can no longer change the response
+ * status because the held-open stream already committed the client to a 200
+ * text/event-stream response. Uses this repo's own SSE error shape (an
+ * `event: error` frame carrying a JSON data payload) so createSseErrorDetector
+ * and every EventSource client recognize it. A JSON upstream body is forwarded
+ * verbatim so the client still sees the provider's real error object.
+ */
+export function waitingStreamErrorChunk(input: {
+  message: string;
+  protocol?: GatewayProviderProtocol;
+  upstreamBodyText?: string;
+}): string {
+  const payload = parseJsonObjectPayload(input.upstreamBodyText) ?? (
+    input.protocol === "anthropic_messages"
+      ? { error: { message: input.message, type: "api_error" }, type: "error" }
+      : { error: { code: "upstream_unavailable", message: input.message } }
+  );
+  return `event: error\ndata: ${JSON.stringify(payload)}\n\n`;
+}
+
+function parseJsonObjectPayload(text: string | undefined): Record<string, unknown> | undefined {
+  const trimmed = text?.trim();
+  if (!trimmed || trimmed.length > 1_048_576) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Holds a streaming client connection open while upstream retries run in the
  * background: emits keep-alive frames on an interval, adopts the eventual
  * successful upstream body into the same stream, and cleans up its timer and
@@ -104,6 +150,8 @@ export type WaitingResponseStream = {
   readonly response: Response;
   /** Pumps a successful upstream response body into the held-open stream. */
   adopt(upstreamResponse: Response): Promise<void>;
+  /** Writes one terminal SSE error frame and closes the held-open stream. */
+  failWith(errorChunk: string): void;
   /** Stops keep-alives, detaches the abort listener, and closes the stream. */
   dispose(): void;
 };
@@ -211,16 +259,31 @@ export function startWaitingResponseStream(input: {
     response,
     async adopt(upstreamResponse: Response): Promise<void> {
       stopKeepAlive();
+      copyAdoptedUpstreamHeaders(response.headers, upstreamResponse.headers);
       const body = upstreamResponse.body;
       if (!body) {
         closeController();
         return;
       }
+      if (disposed || boundSignal?.aborted) {
+        // The client went away before adoption started; stop the upstream
+        // transfer instead of pumping into a closed stream.
+        await cancelUpstreamBody(body);
+        return;
+      }
       const reader = body.getReader();
+      // A disconnected client must also stop the upstream read: cancelling the
+      // reader settles any pending read immediately instead of leaving it pending.
+      const cancelUpstreamOnAbort = (): void => {
+        void reader.cancel().catch(() => {
+          // The upstream body may already be closed; nothing left to cancel.
+        });
+      };
+      boundSignal?.addEventListener("abort", cancelUpstreamOnAbort, { once: true });
       try {
         for (;;) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done || disposed) break;
           enqueue(value);
         }
         closeController();
@@ -228,10 +291,61 @@ export function startWaitingResponseStream(input: {
         // Surface upstream mid-body failures to the client through the same
         // stream error path a direct pipe would have used.
         failController(error instanceof Error ? error : new Error(String(error)));
+      } finally {
+        boundSignal?.removeEventListener("abort", cancelUpstreamOnAbort);
       }
+    },
+    failWith(errorChunk: string): void {
+      stopKeepAlive();
+      enqueue(encoder.encode(errorChunk));
+      closeController();
     },
     dispose
   };
+}
+
+async function cancelUpstreamBody(body: ReadableStream<Uint8Array>): Promise<void> {
+  try {
+    await body.cancel();
+  } catch {
+    // Best-effort upstream cleanup must not mask the client disconnect.
+  }
+}
+
+/**
+ * Hop-by-hop, framing, and client-identity headers that are never copied from
+ * an adopted upstream response onto the held-open stream: framing belongs to
+ * the synthesized SSE response (whose body now also carries keep-alive frames,
+ * so content-length would be wrong), and set-cookie must not leak one upstream
+ * credential's cookies to every client of this gateway response.
+ */
+const adoptedUpstreamHeaderDenyList = new Set([
+  "connection",
+  "content-encoding",
+  "content-length",
+  "content-type",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "set-cookie",
+  "set-cookie2",
+  "te",
+  "trailer",
+  "transfer-encoding",
+  "upgrade"
+]);
+
+function copyAdoptedUpstreamHeaders(target: Headers, upstreamHeaders: Headers): void {
+  for (const [name, value] of upstreamHeaders) {
+    if (!adoptedUpstreamHeaderDenyList.has(name.toLowerCase())) {
+      try {
+        target.set(name, value);
+      } catch {
+        // A forbidden response-header name slipped through on an exotic
+        // runtime; skip it rather than failing an otherwise good adoption.
+      }
+    }
+  }
 }
 
 /** Terminal 503 returned to a non-streaming client once the wait budget ends. */
@@ -275,7 +389,7 @@ export function logUpstreamRetryAttempt(input: {
 export function logUpstreamRetryEnded(input: {
   attempts: number;
   elapsedMs: number;
-  mode: "client-disconnect" | "non-streaming-timeout";
+  mode: "client-disconnect" | "non-streaming-timeout" | "retry-budget-exhausted";
 }): void {
   console.warn(
     `[gateway] Upstream retry loop ended (${input.mode}): attempts=${input.attempts} waited_ms=${Math.max(0, Math.round(input.elapsedMs))}`

@@ -2,7 +2,7 @@
  * Extracted from gateway/service.ts. Keep this module focused on its named gateway boundary.
  */
 import { Readable } from "node:stream";
-import type { AppConfig, GatewayProviderConfig, GatewayProviderProtocol, ProviderCredentialConfig, RequestRouteTraceChange, RouterFallbackConfig } from "@ccr/core/contracts/app";
+import { ROUTER_FALLBACK_MAX_RETRY_COUNT, type AppConfig, type GatewayProviderConfig, type GatewayProviderProtocol, type ProviderCredentialConfig, type RequestRouteTraceChange, type RouterFallbackConfig } from "@ccr/core/contracts/app";
 import { fetchWithSystemProxy } from "@ccr/core/proxy/system-proxy-fetch";
 import { createRouteExecutionPlan } from "@ccr/core/routing/execution-plan";
 import { rewriteRouteModelInUrl } from "@ccr/core/routing/protocol-adapter";
@@ -21,6 +21,7 @@ import { activeProviderCredentials, findProviderByPublicOrInternalName, findProv
 import { delay } from "@ccr/core/gateway/internal/clock";
 import {
   isStreamingRequestBody,
+  isStreamingRequestPath,
   logUpstreamRetryAttempt,
   logUpstreamRetryEnded,
   parseRetryAfterHeaderMs,
@@ -28,6 +29,7 @@ import {
   upstreamWaitingTimeoutResponse,
   waitingCooldownMs,
   waitingKeepAliveChunk,
+  waitingStreamErrorChunk,
   startWaitingResponseStream,
   type ResolvedWaitingRetryOptions,
   type WaitingResponseStream,
@@ -351,7 +353,8 @@ export async function fetchUpstreamWithFallback(input: FetchUpstreamWithFallback
  */
 async function runUpstreamWithWaitingRetry(input: FetchUpstreamWithFallbackInput): Promise<UpstreamFetchResult> {
   const waitingOptions: ResolvedWaitingRetryOptions = resolveWaitingRetryOptions(input.waitingRetry);
-  const streamingExpected = shouldSendBody(input.method) && isStreamingRequestBody(input.body);
+  const streamingExpected = shouldSendBody(input.method) &&
+    (isStreamingRequestBody(input.body) || isStreamingRequestPath(input.path));
   const waitingStartedAtMs = Date.now();
   let waitingStream: WaitingResponseStream | undefined;
   try {
@@ -374,6 +377,26 @@ async function runUpstreamWithWaitingRetry(input: FetchUpstreamWithFallbackInput
       planningRouting.routedModel
     );
     const failedAttempts: UpstreamFailedAttempt[] = [];
+    // Universal auto-retry can run far more attempts than any fallback plan
+    // holds, so retain only recent failure diagnostics and keep the exact
+    // total separately for attempt numbering, logs, and response headers.
+    let droppedFailedAttemptCount = 0;
+    const totalFailedAttemptCount = (): number => droppedFailedAttemptCount + failedAttempts.length;
+    const retainBoundedFailedAttempts = (): void => {
+      if (failedAttempts.length <= maxRetainedFailedAttempts) {
+        return;
+      }
+      droppedFailedAttemptCount += failedAttempts.length - maxRetainedFailedAttempts;
+      failedAttempts.splice(0, failedAttempts.length - maxRetainedFailedAttempts);
+    };
+    // Honor the router's own retry budget: when the user configured retry mode
+    // with a finite retryCount, the plan performs retryCount + 1 attempts and
+    // the waiting loop stops re-running the plan once that budget is spent.
+    // Modes "off" and "model-chain" keep the unlimited-until-disconnect
+    // contract that this waiting-retry feature promises.
+    const plannedRetryBudget = input.fallback.mode === "retry"
+      ? clampRouterRetryBudget(input.fallback.retryCount)
+      : undefined;
     const attemptRoutingCache = new Map<string | undefined, UpstreamAttemptRouting>();
   const primaryAttempt = attempts[0];
   const parsedInputBody = parseJsonObjectSafe(input.body);
@@ -404,7 +427,7 @@ async function runUpstreamWithWaitingRetry(input: FetchUpstreamWithFallbackInput
     for (;;) {
       if (input.signal?.aborted) {
         logUpstreamRetryEnded({
-          attempts: failedAttempts.length,
+          attempts: totalFailedAttemptCount(),
           elapsedMs: Date.now() - waitingStartedAtMs,
           mode: "client-disconnect"
         });
@@ -415,24 +438,42 @@ async function runUpstreamWithWaitingRetry(input: FetchUpstreamWithFallbackInput
 
       const outcome = await executeUpstreamAttemptRound({
         ...input,
-        attemptNumberBase: failedAttempts.length,
+        attemptNumberBase: totalFailedAttemptCount(),
         attempts,
         attemptRoutingCache,
         failedAttempts,
         // Route-trace preparation changes belong to the very first attempt only.
-        includePreparationChanges: failedAttempts.length === 0
+        includePreparationChanges: totalFailedAttemptCount() === 0
       });
+      retainBoundedFailedAttempts();
 
       if (outcome.kind !== "transient") {
         if (!waitingStream) {
-          return outcome.result;
+          return withFailedAttemptTotal(outcome.result, droppedFailedAttemptCount);
+        }
+        if (outcome.kind === "passthrough") {
+          // The held-open stream already committed the client to a 200
+          // text/event-stream response, so a permanent client-class failure can
+          // no longer change the status. Report it through that stream with this
+          // repo's SSE error shape instead of adopting it as though it were a
+          // successful body.
+          waitingStream.failWith(waitingStreamErrorChunk({
+            message: `Upstream provider rejected the request with status ${outcome.result.response.status}.`,
+            protocol: requestProtocolForPath(input.path),
+            upstreamBodyText: await readTerminalResponseBodyText(outcome.result.response)
+          }));
+          return withFailedAttemptTotal({
+            attempt: outcome.result.attempt,
+            failedAttempts: outcome.result.failedAttempts,
+            response: waitingStream.response
+          }, droppedFailedAttemptCount);
         }
         await waitingStream.adopt(outcome.result.response);
-        return {
+        return withFailedAttemptTotal({
           attempt: outcome.result.attempt,
           failedAttempts: outcome.result.failedAttempts,
           response: waitingStream.response
-        };
+        }, droppedFailedAttemptCount);
       }
 
       // Record every retried attempt so fallback diagnostics and credential
@@ -444,6 +485,7 @@ async function runUpstreamWithWaitingRetry(input: FetchUpstreamWithFallbackInput
         model: outcome.attempt.model,
         ...(outcome.statusCode !== undefined ? { statusCode: outcome.statusCode } : {})
       });
+      retainBoundedFailedAttempts();
       const cooldownMs = waitingCooldownMs({
         cooldownMs: waitingOptions.cooldownMs,
         retryAfterHeader: outcome.retryAfterHeader
@@ -454,7 +496,7 @@ async function runUpstreamWithWaitingRetry(input: FetchUpstreamWithFallbackInput
       }
       const retryAfterHeaderMs = parseRetryAfterHeaderMs(outcome.retryAfterHeader);
       logUpstreamRetryAttempt({
-        attemptNumber: failedAttempts.length,
+        attemptNumber: totalFailedAttemptCount(),
         cooldownMs,
         model: outcome.attempt.model ? sanitizeHeaderValue(outcome.attempt.model) : undefined,
         reason: outcome.statusCode !== undefined ? `http:${outcome.statusCode}` : "network-error",
@@ -463,23 +505,58 @@ async function runUpstreamWithWaitingRetry(input: FetchUpstreamWithFallbackInput
           : {})
       });
 
+      if (plannedRetryBudget !== undefined && totalFailedAttemptCount() >= plannedRetryBudget) {
+        logUpstreamRetryEnded({
+          attempts: totalFailedAttemptCount(),
+          elapsedMs: Date.now() - waitingStartedAtMs,
+          mode: "retry-budget-exhausted"
+        });
+        if (streamingExpected) {
+          // The held-open stream cannot change its status anymore; report the
+          // exhausted budget through it with the repo's SSE error shape.
+          waitingStream ??= startWaitingResponseStream({
+            intervalMs: waitingOptions.keepAliveIntervalMs,
+            keepAliveChunk: () => waitingKeepAliveChunk(requestProtocolForPath(input.path)),
+            signal: input.signal
+          });
+          waitingStream.failWith(waitingStreamErrorChunk({
+            message: `Upstream provider remained unavailable after ${totalFailedAttemptCount()} attempt(s); the configured fallback retry budget is exhausted.`,
+            protocol: requestProtocolForPath(input.path)
+          }));
+          return withFailedAttemptTotal({
+            attempt: outcome.attempt,
+            failedAttempts: outcome.failedAttempts,
+            response: waitingStream.response
+          }, droppedFailedAttemptCount);
+        }
+        return withFailedAttemptTotal({
+          attempt: outcome.attempt,
+          failedAttempts: outcome.failedAttempts,
+          response: upstreamWaitingTimeoutResponse({
+            attempts: totalFailedAttemptCount(),
+            elapsedMs: Date.now() - waitingStartedAtMs,
+            protocol: requestProtocolForPath(input.path)
+          })
+        }, droppedFailedAttemptCount);
+      }
+
       if (!streamingExpected) {
         const waitedMs = Date.now() - waitingStartedAtMs;
         if (waitedMs + cooldownMs > waitingOptions.maxNonStreamingWaitMs) {
           logUpstreamRetryEnded({
-            attempts: failedAttempts.length,
+            attempts: totalFailedAttemptCount(),
             elapsedMs: waitedMs,
             mode: "non-streaming-timeout"
           });
-          return {
+          return withFailedAttemptTotal({
             attempt: outcome.attempt,
             failedAttempts: outcome.failedAttempts,
             response: upstreamWaitingTimeoutResponse({
-              attempts: failedAttempts.length + 1,
+              attempts: totalFailedAttemptCount() + 1,
               elapsedMs: waitedMs,
               protocol: requestProtocolForPath(input.path)
             })
-          };
+          }, droppedFailedAttemptCount);
         }
       } else if (!waitingStream) {
         waitingStream = startWaitingResponseStream({
@@ -494,6 +571,44 @@ async function runUpstreamWithWaitingRetry(input: FetchUpstreamWithFallbackInput
   } finally {
     waitingStream?.dispose();
   }
+}
+
+
+/** Reads a terminal upstream error body so its JSON can surface to the client. */
+async function readTerminalResponseBodyText(response: Response): Promise<string | undefined> {
+  try {
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return buffer.subarray(0, 1_048_576).toString("utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+
+/** Retained failure diagnostics per request; older entries are dropped. */
+export const maxRetainedFailedAttempts = 100;
+
+
+/**
+ * Attaches the exact failed-attempt total to a result once diagnostics have
+ * been trimmed, so x-ccr-fallback-attempts keeps reporting the true count
+ * while the retained array stays bounded.
+ */
+function withFailedAttemptTotal(result: UpstreamFetchResult, droppedFailedAttemptCount: number): UpstreamFetchResult {
+  if (droppedFailedAttemptCount === 0) {
+    return result;
+  }
+  return {
+    ...result,
+    failedAttemptsTotal: droppedFailedAttemptCount + result.failedAttempts.length
+  };
+}
+
+
+/** retry mode performs retryCount + 1 planned attempts; clamp like the plan does. */
+function clampRouterRetryBudget(retryCount: number): number {
+  const normalized = Number.isFinite(retryCount) ? Math.trunc(retryCount) : 0;
+  return Math.min(ROUTER_FALLBACK_MAX_RETRY_COUNT, Math.max(0, normalized)) + 1;
 }
 
 
@@ -1312,13 +1427,16 @@ export function destroyResponseStreams(streams: Readable[]): void {
 export function mergeFallbackResponseHeaders(headers: Headers, result: UpstreamFetchResult): Headers {
   const credentialIds = result.attempt.credentialIds ?? [];
   const credentialSaturated = result.attempt.headers?.["x-ccr-provider-credential-saturated"] === "true";
-  if (result.failedAttempts.length === 0 && credentialIds.length === 0 && !credentialSaturated) {
+  const totalFailedAttempts = result.failedAttemptsTotal ?? result.failedAttempts.length;
+  if (totalFailedAttempts === 0 && credentialIds.length === 0 && !credentialSaturated) {
     return headers;
   }
 
   const merged = new Headers(headers);
-  if (result.failedAttempts.length > 0) {
-    merged.set("x-ccr-fallback-attempts", String(result.failedAttempts.length + 1));
+  if (totalFailedAttempts > 0) {
+    // The exact total stays truthful even when the retained diagnostics array
+    // was trimmed to its most recent entries.
+    merged.set("x-ccr-fallback-attempts", String(totalFailedAttempts + 1));
     merged.set("x-ccr-fallback-failures", formatFallbackFailures(result.failedAttempts));
     if (result.failedAttempts.some((attempt) => (attempt.delayMs ?? 0) > 0)) {
       merged.set("x-ccr-fallback-delays-ms", formatFallbackDelays(result.failedAttempts));
