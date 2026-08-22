@@ -1,0 +1,196 @@
+name: Pages site
+
+# Publishes the static site produced from site/ to GitHub Pages.
+#
+# By standing decision this workflow runs NO tests, NO lint and NO gates of any
+# kind: build -> assert the emitted shape -> upload -> deploy. That is the whole
+# job. A run fails only when the build, the shape assertion, or publication
+# itself fails.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "site/**"
+      - "scripts/build-site.mjs"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+# Deployment replaces the live site, so an in-flight run must never be cancelled
+# mid-publish. Deliberately NO cancel-in-progress here.
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Build & verify site-dist
+    runs-on: ubuntu-latest
+    env:
+      # Org token chain for any GitHub API operation. Unused today (the build is
+      # zero-dependency and makes no API calls); wired up front so a future gh
+      # call in this job cannot ship without the chain in place.
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.ORG_TOKEN || secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      # scripts/build-site.mjs is deliberately zero-dependency (Node built-ins
+      # only), so there is no npm ci and no npm cache. If it ever gains
+      # dependencies, add "npm ci --no-audit --no-fund" immediately above it.
+      - name: Build site into site-dist/
+        run: |
+          if [ ! -f scripts/build-site.mjs ]; then
+            echo "::error::scripts/build-site.mjs was not found. The Pages pipeline expects a zero-dependency build script at exactly that path, emitting the finished site into site-dist/ with base path /claude-code-router/."
+            exit 1
+          fi
+          node scripts/build-site.mjs
+
+      # Shape assertion: index.html must exist, and every local html/css/js
+      # reference emitted anywhere in site-dist/ must carry the
+      # /claude-code-router/ base path. Fails loudly otherwise. The heuristics
+      # below scan href/src/action/poster/srcset/meta-content attributes,
+      # CSS url()/@import (including inline styles), and path-looking JS string
+      # literals; absolute and protocol-relative external URLs, data:/mailto:/
+      # tel:/blob: schemes, and in-page anchors are skipped.
+      - name: Assert index.html exists and references carry the base path
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+
+          const DIST = 'site-dist';
+          const BASE = '/claude-code-router/';
+          const problems = [];
+          let refsChecked = 0;
+
+          function walk(dir, out) {
+            out = out || [];
+            for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+              const p = path.join(dir, e.name);
+              if (e.isDirectory()) walk(p, out);
+              else out.push(p);
+            }
+            return out;
+          }
+
+          if (!fs.existsSync(path.join(DIST, 'index.html'))) {
+            console.error('FAIL: ' + DIST + '/index.html does not exist after the build step.');
+            console.error('Expected contract: scripts/build-site.mjs emits the finished site into ' + DIST + '/ with every reference carrying the "' + BASE + '" prefix.');
+            process.exit(1);
+          }
+
+          const files = walk(DIST);
+          const htmlFiles = files.filter(function (f) { return /\.html?$/i.test(f); });
+          const cssFiles = files.filter(function (f) { return /\.css$/i.test(f); });
+          const jsFiles = files.filter(function (f) { return /\.m?js$/i.test(f); });
+
+          function checkRef(file, kind, ref) {
+            if (typeof ref !== 'string') return;
+            const r = ref.trim();
+            if (!r || r.length > 2000) return;
+            if (/^[a-z][a-z0-9+.-]*:/i.test(r)) return; // absolute URL or data:/mailto:/tel:/blob:
+            if (r.startsWith('//')) return;             // protocol-relative URL
+            if (r.startsWith('#')) return;              // in-page anchor
+            refsChecked += 1;
+            if (r.indexOf(BASE) === 0) return;          // carries the required prefix
+            if (r.startsWith('/')) {
+              problems.push(file + ': ' + kind + ' "' + r + '" is absolute but missing the "' + BASE + '" prefix');
+            } else {
+              problems.push(file + ': ' + kind + ' "' + r + '" is relative; expected every reference to carry the "' + BASE + '" prefix');
+            }
+          }
+
+          function checkSrcset(file, value) {
+            for (const part of String(value).split(',')) {
+              const tok = part.trim().split(/\s+/)[0];
+              if (tok) checkRef(file, 'srcset', tok);
+            }
+          }
+
+          function scanCssText(file, label, text) {
+            let m;
+            const urlRe = /url\(\s*(['"]?)([^'")]*)\1\s*\)/gi;
+            while ((m = urlRe.exec(text)) !== null) checkRef(file, label + ' url()', m[2]);
+            const importRe = /@import\s+(?:url\(\s*(['"]?)([^'")]*)\1\s*\)|(['"])([^'"]+)\3)/gi;
+            while ((m = importRe.exec(text)) !== null) checkRef(file, label + ' @import', m[2] || m[4] || '');
+          }
+
+          const attrRe = /\b(href|src|action|poster|content|srcset)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+          for (const f of htmlFiles) {
+            const text = fs.readFileSync(f, 'utf8');
+            let m;
+            attrRe.lastIndex = 0;
+            while ((m = attrRe.exec(text)) !== null) {
+              const kind = m[1].toLowerCase();
+              const val = (m[2] !== undefined) ? m[2] : m[3];
+              if (kind === 'content') {
+                // meta content holds plenty of non-URL metadata; only judge values that look like site paths.
+                if (val && val.trim().startsWith('/')) checkRef(f, 'meta content', val);
+              } else if (kind === 'srcset') {
+                checkSrcset(f, val);
+              } else {
+                checkRef(f, kind, val);
+              }
+            }
+            scanCssText(f, 'inline-style', text);
+          }
+
+          for (const f of cssFiles) {
+            scanCssText(f, 'css', fs.readFileSync(f, 'utf8'));
+          }
+
+          const litRe = /"([^"\\\n]+)"|'([^'\\\n]+)'|`([^`\\]+)`/g;
+          for (const f of jsFiles) {
+            const text = fs.readFileSync(f, 'utf8');
+            let m;
+            litRe.lastIndex = 0;
+            while ((m = litRe.exec(text)) !== null) {
+              const v = (m[1] !== undefined) ? m[1] : ((m[2] !== undefined) ? m[2] : m[3]);
+              if (v && v.startsWith('/') && /\.(html?|css|m?js)(?:[?#]|$)/i.test(v)) {
+                checkRef(f, 'js literal', v);
+              }
+            }
+          }
+
+          if (problems.length > 0) {
+            console.error('FAIL: ' + problems.length + ' emitted reference(s) do not carry the "' + BASE + '" base path:');
+            const shown = problems.slice(0, 50);
+            for (const p of shown) console.error('  - ' + p);
+            if (problems.length > shown.length) console.error('  ... and ' + (problems.length - shown.length) + ' more');
+            process.exit(1);
+          }
+          console.log('OK: ' + DIST + '/index.html present. Scanned ' + htmlFiles.length + ' html, ' + cssFiles.length + ' css, ' + jsFiles.length + ' js file(s); ' + refsChecked + ' local reference(s) all carry the "' + BASE + '" prefix.');
+          NODE
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site-dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
