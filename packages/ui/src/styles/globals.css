@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "./m3/tokens.css";
+@import "./m3/primitives.css";
 @source "../pages/**/*.{html,ts,tsx}";
 @source "../components/**/*.{ts,tsx}";
 @source "../lib/**/*.{ts,tsx}";

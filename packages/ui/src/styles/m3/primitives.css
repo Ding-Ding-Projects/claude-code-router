@@ -1,0 +1,192 @@
+/*
+ * Material Design 3 primitive styles backing @/components/md3.
+ *
+ * These rules are intentionally UNLAYERED (imported by styles/globals.css
+ * outside Tailwind's cascade layers), so they deterministically win over the
+ * utility classes the wrapped baseui-era components apply. Keep them limited
+ * to the .md-* hooks below; surfaces should consume the tokens directly.
+ */
+
+/* ---- MdButton ------------------------------------------------------- */
+
+.md-btn {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  box-sizing: border-box;
+  color: var(--md-sys-color-primary);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: var(--md-sys-typescale-label-large-font-size);
+  font-weight: var(--md-sys-typescale-label-large-font-weight);
+  gap: 8px;
+  height: 40px;
+  justify-content: center;
+  letter-spacing: var(--md-sys-typescale-label-large-letter-spacing);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  outline: none;
+  padding: 0 24px;
+  text-decoration: none;
+  transition:
+    background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+    box-shadow var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+    color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+  white-space: nowrap;
+}
+
+.md-btn:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+.md-btn:disabled {
+  color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+  cursor: default;
+  pointer-events: none;
+}
+
+.md-btn--filled,
+.md-btn--elevated {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.md-btn--filled:hover,
+.md-btn--elevated:hover {
+  background: color-mix(in srgb, var(--md-sys-color-on-primary) 8%, var(--md-sys-color-primary));
+  box-shadow: var(--md-elevation-level1);
+}
+
+.md-btn--filled:active,
+.md-btn--elevated:active {
+  background: color-mix(in srgb, var(--md-sys-color-on-primary) 12%, var(--md-sys-color-primary));
+  box-shadow: none;
+}
+
+.md-btn--filled:disabled,
+.md-btn--elevated:disabled {
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
+  box-shadow: none;
+}
+
+.md-btn--elevated:not(:hover) {
+  box-shadow: var(--md-elevation-level1);
+}
+
+.md-btn--tonal {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.md-btn--tonal:hover {
+  background: color-mix(in srgb, var(--md-sys-color-on-secondary-container) 8%, var(--md-sys-color-secondary-container));
+  box-shadow: var(--md-elevation-level1);
+}
+
+.md-btn--tonal:active {
+  background: color-mix(in srgb, var(--md-sys-color-on-secondary-container) 12%, var(--md-sys-color-secondary-container));
+  box-shadow: none;
+}
+
+.md-btn--tonal:disabled {
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
+  box-shadow: none;
+}
+
+.md-btn--outlined {
+  background: transparent;
+  border: 1px solid var(--md-sys-color-outline);
+  color: var(--md-sys-color-primary);
+}
+
+.md-btn--outlined:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent);
+}
+
+.md-btn--outlined:disabled {
+  border-color: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
+}
+
+.md-btn--text:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent);
+}
+
+.md-btn--sm {
+  height: 32px;
+  padding: 0 16px;
+  font-size: var(--md-sys-typescale-label-medium-font-size);
+  letter-spacing: var(--md-sys-typescale-label-medium-letter-spacing);
+  line-height: var(--md-sys-typescale-label-medium-line-height);
+}
+
+.md-btn--lg {
+  height: 48px;
+  padding: 0 28px;
+}
+
+.md-btn--icon {
+  height: 40px;
+  padding: 0;
+  width: 40px;
+}
+
+/* ---- MdCard --------------------------------------------------------- */
+
+.md-card {
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: var(--md-sys-shape-corner-medium);
+  color: var(--md-sys-color-on-surface);
+  overflow: hidden;
+}
+
+.md-card--elevated {
+  box-shadow: var(--md-elevation-level1);
+}
+
+.md-card--outlined {
+  background: var(--md-sys-color-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  box-shadow: none;
+}
+
+.md-card--interactive {
+  transition:
+    box-shadow var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+}
+
+.md-card--interactive:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .md-card--interactive:hover {
+    box-shadow: var(--md-elevation-level2);
+  }
+}
+
+/* ---- MdSwitch ------------------------------------------------------- */
+
+/* The wrapped Switch renders input[role=switch] followed by the track span;
+   aria-checked already reflects state, so no extra plumbing is needed. */
+.md-switch input[aria-checked="true"] + span {
+  background-color: var(--md-sys-color-primary);
+  box-shadow: none;
+}
+
+.md-switch input[aria-checked="true"] + span > span {
+  background-color: var(--md-sys-color-on-primary);
+  box-shadow: var(--md-elevation-level1);
+}
+
+.md-switch input[aria-checked="false"] + span > span {
+  background-color: var(--md-sys-color-outline);
+}
+
+.md-switch input:focus-visible + span {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
