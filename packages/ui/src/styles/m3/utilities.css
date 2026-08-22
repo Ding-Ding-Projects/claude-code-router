@@ -111,3 +111,33 @@
   letter-spacing: var(--md-sys-typescale-label-small-letter-spacing);
   line-height: var(--md-sys-typescale-label-small-line-height);
 }
+
+/*
+ * M3 dialog chrome for the home surface, applied through the structural hooks
+ * the shared dialog component already emits (data-ui-dialog-root on the scrim,
+ * a single section child for the container) so no JSX changes are needed and
+ * other pages keep their current look until their lanes convert.
+ */
+
+.md-home-surface [data-ui-dialog-root] {
+  background: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent);
+}
+
+.md-home-surface [data-ui-dialog-root] > section {
+  background: var(--md-sys-color-surface-container-high);
+  border-color: transparent;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  box-shadow: var(--md-elevation-level3);
+}
+
+.md-home-surface [data-ui-dialog-root] > section > header,
+.md-home-surface [data-ui-dialog-root] > section > footer {
+  border-color: var(--md-sys-color-outline-variant);
+}
+
+.md-home-surface [data-ui-dialog-root] > section > header h2 {
+  font-size: var(--md-sys-typescale-title-medium-font-size);
+  font-weight: var(--md-sys-typescale-title-medium-font-weight);
+  letter-spacing: var(--md-sys-typescale-title-medium-letter-spacing);
+  line-height: var(--md-sys-typescale-title-medium-line-height);
+}

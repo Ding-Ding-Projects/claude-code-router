@@ -1,7 +1,8 @@
 import {
-  AppCopy, AppUpdateStatus, Button, Check, CircleAlert, cn, Dialog, DialogBody,
+  AppCopy, AppUpdateStatus, Check, CircleAlert, cn, Dialog, DialogBody,
   DialogContent, DialogFooter, DialogHeader, DialogTitle, Download, LoaderCircle, RefreshCw, X
 } from "../shared/index";
+import { MdButton } from "@/components/md3";
 
 export type UpdateActionBusy = "" | "check" | "download" | "install";
 
@@ -67,9 +68,9 @@ export function UpdateDialog({
               />
             ) : null}
           </div>
-          <Button aria-label={copy.settings.close} disabled={installing} onClick={onClose} size="iconSm" title={copy.settings.close} type="button" variant="ghost">
+          <MdButton aria-label={copy.settings.close} disabled={installing} onClick={onClose} size="iconSm" title={copy.settings.close} type="button" variant="text">
             <X className="h-4 w-4" />
-          </Button>
+          </MdButton>
         </DialogHeader>
 
         <DialogBody className="grid gap-3">
@@ -82,8 +83,8 @@ export function UpdateDialog({
           </div>
 
           {status.state === "downloading" ? (
-            <div className="grid gap-2 rounded-md border border-border bg-muted/20 px-3 py-3">
-              <div className="flex min-w-0 items-center justify-between gap-3 text-[11px] font-medium text-muted-foreground">
+            <div className="grid gap-2 rounded-[var(--md-sys-shape-corner-small)] border border-transparent bg-[var(--md-sys-color-surface-container)] px-3 py-3">
+              <div className="md-type-label-medium flex min-w-0 items-center justify-between gap-3 text-[var(--md-sys-color-on-surface-variant)]">
                 <span>{t("Downloading update")}</span>
                 <span>{progressPercent !== undefined ? `${progressPercent.toFixed(0)}%` : ""}</span>
               </div>
@@ -92,51 +93,54 @@ export function UpdateDialog({
                 aria-valuemax={100}
                 aria-valuemin={0}
                 aria-valuenow={progressPercent ?? 0}
-                className="h-2 overflow-hidden rounded-full bg-muted"
+                className="h-2 overflow-hidden rounded-full bg-[var(--md-sys-color-surface-container-highest)]"
                 role="progressbar"
               >
-                <div className="h-full rounded-full bg-primary transition-[width] duration-200" style={{ width: `${progressPercent ?? 0}%` }} />
+                <div
+                  className="h-full rounded-full bg-[var(--md-sys-color-primary)] transition-[width] duration-[var(--md-sys-motion-duration-short4)] ease-[var(--md-sys-motion-easing-standard)]"
+                  style={{ width: `${progressPercent ?? 0}%` }}
+                />
               </div>
-              <div className="text-[11px] text-muted-foreground">{formatDownloadProgress(status.progress)}</div>
+              <div className="md-type-label-small text-[var(--md-sys-color-on-surface-variant)]">{formatDownloadProgress(status.progress)}</div>
             </div>
           ) : null}
 
           {canInstall ? (
-            <div className="rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-[12px] text-primary">
+            <div className="md-type-body-medium rounded-[var(--md-sys-shape-corner-small)] border border-transparent bg-[var(--md-sys-color-primary-container)] px-3 py-2 text-[var(--md-sys-color-on-primary-container)]">
               {t("Update downloaded. Restart to finish updating.")}
             </div>
           ) : null}
 
           {!status.supported ? (
-            <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
+            <div className="md-type-body-medium rounded-[var(--md-sys-shape-corner-small)] border border-transparent bg-[var(--md-sys-color-surface-container)] px-3 py-2 text-[var(--md-sys-color-on-surface-variant)]">
               {t("Updates are only available in packaged builds.")}
             </div>
           ) : null}
 
           {displayedError ? (
-            <div className="flex min-w-0 items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[12px] text-destructive">
+            <div className="md-type-body-medium flex min-w-0 items-start gap-2 rounded-[var(--md-sys-shape-corner-small)] border border-transparent bg-[var(--md-sys-color-error-container)] px-3 py-2 text-[var(--md-sys-color-on-error-container)]">
               <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span className="min-w-0 break-words">{displayedError}</span>
             </div>
           ) : null}
 
           {releaseNotes ? (
-            <div className="grid gap-1 rounded-md border border-border bg-background px-3 py-2">
-              <div className="text-[11px] font-semibold text-muted-foreground">{t("Release notes")}</div>
-              <div className="max-h-44 overflow-auto whitespace-pre-wrap text-[12px] leading-5 text-foreground">{releaseNotes}</div>
+            <div className="grid gap-1 rounded-[var(--md-sys-shape-corner-small)] border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] px-3 py-2">
+              <div className="md-type-label-large text-[var(--md-sys-color-on-surface-variant)]">{t("Release notes")}</div>
+              <div className="md-type-body-medium max-h-44 overflow-auto whitespace-pre-wrap text-[var(--md-sys-color-on-surface)]">{releaseNotes}</div>
             </div>
           ) : null}
         </DialogBody>
 
         <DialogFooter>
-          <Button disabled={installing} onClick={onClose} type="button" variant="outline">
+          <MdButton disabled={installing} onClick={onClose} size="sm" type="button" variant="outlined">
             {t("Close")}
-          </Button>
+          </MdButton>
           {primaryAction ? (
-            <Button disabled={primaryAction.disabled || busy} onClick={() => void primaryAction.onClick()} type="button">
+            <MdButton disabled={primaryAction.disabled || busy} onClick={() => void primaryAction.onClick()} size="sm" type="button">
               {primaryAction.icon}
               {primaryAction.label}
-            </Button>
+            </MdButton>
           ) : null}
         </DialogFooter>
       </DialogContent>
@@ -146,10 +150,10 @@ export function UpdateDialog({
 
 function UpdateInfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-md border border-border/70 bg-muted/20 px-3 py-2">
-      <div className="text-[10px] font-medium uppercase text-muted-foreground">{label}</div>
+    <div className="min-w-0 rounded-[var(--md-sys-shape-corner-small)] border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-2">
+      <div className="md-type-label-small uppercase text-[var(--md-sys-color-on-surface-variant)]">{label}</div>
       <div
-        className={cn("mt-1 min-w-0 truncate text-[12px] font-medium text-foreground")}
+        className={cn("md-type-body-medium mt-1 min-w-0 truncate font-medium text-[var(--md-sys-color-on-surface)]")}
         title={value}
       >
         {value}
@@ -213,14 +217,14 @@ function updatePrimaryAction({
 function UpdateStateBadge({ label, status }: { label: string; status: AppUpdateStatus }) {
   return (
     <span className={cn(
-      "inline-flex shrink-0 items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-medium",
+      "md-type-label-small inline-flex shrink-0 items-center whitespace-nowrap rounded-full border px-2 py-0.5",
       status.state === "error"
-        ? "border-destructive/25 bg-destructive/10 text-destructive"
+        ? "border-transparent bg-[var(--md-sys-color-error-container)] text-[var(--md-sys-color-on-error-container)]"
         : status.state === "not-available"
-          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+          ? "border-transparent bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]"
         : status.state === "available" || status.state === "downloaded" || status.state === "downloading"
-          ? "border-amber-200 bg-amber-50 text-amber-700"
-          : "border-border bg-muted/40 text-muted-foreground"
+          ? "border-transparent bg-[var(--md-sys-color-tertiary-container)] text-[var(--md-sys-color-on-tertiary-container)]"
+          : "border-[var(--md-sys-color-outline-variant)] bg-transparent text-[var(--md-sys-color-on-surface-variant)]"
     )}>
       {label}
     </span>
