@@ -196,6 +196,11 @@ export type UpstreamFailedAttempt = {
 export type UpstreamFetchResult = {
   attempt: UpstreamAttempt;
   failedAttempts: UpstreamFailedAttempt[];
+  /**
+   * Exact number of failed upstream attempts when diagnostics were trimmed to
+   * stay bounded; absent when failedAttempts holds every failure.
+   */
+  failedAttemptsTotal?: number;
   response: Response;
 };
 

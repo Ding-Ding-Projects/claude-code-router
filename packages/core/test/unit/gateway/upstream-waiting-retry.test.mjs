@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fetchUpstreamWithFallback } from "@ccr/core/gateway/upstream/executor.ts";
+import { fetchUpstreamWithFallback, maxRetainedFailedAttempts, mergeFallbackResponseHeaders } from "@ccr/core/gateway/upstream/executor.ts";
 import {
   WAITING_RETRY_COOLDOWN_MS,
   parseRetryAfterHeaderMs,
@@ -337,6 +337,96 @@ test("a client-class failure after the stream is open surfaces as an SSE error e
     // The stream must be terminated after the error frame, and the 400 is a
     // terminal outcome, not a recorded retry failure.
     assert.deepEqual(result.failedAttempts.map((attempt) => attempt.statusCode), [429]);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("retry mode honors the configured retryCount instead of retrying forever", async () => {
+  const stub = withStubbedFetch(() => new Response('{"error":"down"}', { status: 500 }));
+  try {
+    const result = await fetchUpstreamWithFallback(baseInput({
+      fallback: { mode: "retry", models: [], retryCount: 0 },
+      waitingRetry: { cooldownMs: 10, maxNonStreamingWaitMs: 60_000 }
+    }));
+    // retryCount 0 plans exactly one attempt; the waiting loop must stop there
+    // instead of re-running the plan until the (generous) wait budget ends.
+    assert.equal(stub.count, 1, `expected the retry budget to end the loop, saw ${stub.count} fetches`);
+    assert.equal(result.response.status, 503);
+    const payload = JSON.parse(await result.response.text());
+    assert.match(payload.error.message, /attempt\(s\)/);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("an exhausted streaming retry budget reports an SSE error on the held-open stream", async () => {
+  const stub = withStubbedFetch(() => new Response('{"error":"down"}', { status: 429 }));
+  try {
+    const result = await fetchUpstreamWithFallback(baseInput({
+      body: Buffer.from(JSON.stringify({ messages: [], model: "test-model", stream: true })),
+      fallback: { mode: "retry", models: [], retryCount: 0 },
+      waitingRetry: { cooldownMs: 5, maxNonStreamingWaitMs: 60_000 }
+    }));
+    assert.equal(stub.count, 1);
+    assert.equal(result.response.status, 200);
+    const clientBody = await readWholeBody(result.response);
+    assert.ok(clientBody.includes("event: error"), JSON.stringify(clientBody));
+    assert.ok(clientBody.includes("retry budget is exhausted"), JSON.stringify(clientBody));
+  } finally {
+    stub.restore();
+  }
+});
+
+test("failure diagnostics stay bounded while reported attempt counts stay exact", async () => {
+  const controller = new AbortController();
+  const stub = withStubbedFetch((count) => {
+    if (count > maxRetainedFailedAttempts + 50) {
+      controller.abort(new Error("client disconnected"));
+    }
+    return new Response(null, { status: 500 });
+  });
+  try {
+    await assert.rejects(
+      fetchUpstreamWithFallback(baseInput({
+        body: Buffer.from(JSON.stringify({ messages: [], model: "test-model", stream: true })),
+        signal: controller.signal,
+        waitingRetry: { cooldownMs: 0 }
+      })),
+      (error) => {
+        assert.equal(error.name, "UpstreamRequestError");
+        // The retained array is a bounded window, not the whole history.
+        assert.equal(error.failedAttempts.length, maxRetainedFailedAttempts);
+        return true;
+      }
+    );
+    assert.ok(
+      stub.count > maxRetainedFailedAttempts,
+      `expected more than ${maxRetainedFailedAttempts} attempts, saw ${stub.count}`
+    );
+  } finally {
+    stub.restore();
+  }
+});
+
+test("x-ccr-fallback-attempts reports the exact total even when diagnostics were trimmed", async () => {
+  const stub = withStubbedFetch(() => new Response('{"error":"down"}', { status: 500 }));
+  try {
+    const result = await fetchUpstreamWithFallback(baseInput({
+      waitingRetry: { cooldownMs: 0, maxNonStreamingWaitMs: 120 }
+    }));
+    assert.ok(stub.count >= 2, "at least one background retry must happen before giving up");
+    assert.ok(result.failedAttempts.length <= maxRetainedFailedAttempts);
+    const headers = mergeFallbackResponseHeaders(new Headers(), result);
+    // Every failed round is one upstream attempt; the header counts them all
+    // whether or not the retained window trimmed older entries.
+    assert.equal(headers.get("x-ccr-fallback-attempts"), String(stub.count + 1));
+    if (result.failedAttemptsTotal !== undefined) {
+      assert.equal(result.failedAttemptsTotal, stub.count);
+      assert.ok(headers.get("x-ccr-fallback-failures").startsWith("..."), "trimmed entries are elided, not dropped silently");
+    } else {
+      assert.equal(result.failedAttempts.length, stub.count);
+    }
   } finally {
     stub.restore();
   }

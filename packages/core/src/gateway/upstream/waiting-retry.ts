@@ -342,7 +342,7 @@ export function logUpstreamRetryAttempt(input: {
 export function logUpstreamRetryEnded(input: {
   attempts: number;
   elapsedMs: number;
-  mode: "client-disconnect" | "non-streaming-timeout";
+  mode: "client-disconnect" | "non-streaming-timeout" | "retry-budget-exhausted";
 }): void {
   console.warn(
     `[gateway] Upstream retry loop ended (${input.mode}): attempts=${input.attempts} waited_ms=${Math.max(0, Math.round(input.elapsedMs))}`
