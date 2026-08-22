@@ -425,6 +425,9 @@ function effortDescription(effort: string): string {
   if (normalized === "ultra") {
     return "Maximum reasoning with automatic task delegation";
   }
+  if (normalized === "ultracode") {
+    return "Beyond-maximum reasoning for multi-agent workloads";
+  }
   return `${effort.slice(0, 1).toUpperCase()}${effort.slice(1)} reasoning`;
 }
 
@@ -470,7 +473,8 @@ function documentedReasoningProfile(model: string): DocumentedReasoningProfile |
   });
 
   // OpenAI API model pages define the API effort values. Codex additionally
-  // exposes its client-only Ultra mode for Sol/Terra, matching gateway metadata.
+  // exposes its client-only Ultra and Ultracode modes for Sol/Terra, matching
+  // gateway metadata.
   if (/^gpt-5\.6(?:-(?:sol|terra|luna))?(?:-\d{4}-\d{2}-\d{2})?$/.test(name)) {
     const supportsUltra = !/^gpt-5\.6-luna(?:-|$)/.test(name);
     return profile([
@@ -479,7 +483,7 @@ function documentedReasoningProfile(model: string): DocumentedReasoningProfile |
       "high",
       "xhigh",
       "max",
-      ...(supportsUltra ? ["ultra"] : [])
+      ...(supportsUltra ? ["ultra", "ultracode"] : [])
     ], "medium");
   }
   if (/^gpt-5\.5(?:-\d{4}-\d{2}-\d{2})?$/.test(name)) {

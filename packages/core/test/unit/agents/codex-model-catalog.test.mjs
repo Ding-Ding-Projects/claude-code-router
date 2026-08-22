@@ -108,7 +108,7 @@ test("codex catalog enables multimodal reasoning and search when provider protoc
   assert.equal(model.apply_patch_tool_type, "freeform");
 });
 
-test("codex catalog honors configured image, web search, and six reasoning levels", () => {
+test("codex catalog honors configured image, web search, and seven reasoning levels", () => {
   const model = catalogModelFor({
     Providers: [
       {
@@ -124,7 +124,8 @@ test("codex catalog honors configured image, web search, and six reasoning level
               { description: "High", effort: "high" },
               { description: "Extra high", effort: "xhigh" },
               { description: "Max", effort: "max" },
-              { description: "Ultra", effort: "ultra" }
+              { description: "Ultra", effort: "ultra" },
+              { description: "Ultracode", effort: "ultracode" }
             ],
             supportsReasoningSummaries: true
           }
@@ -142,14 +143,21 @@ test("codex catalog honors configured image, web search, and six reasoning level
   assert.equal(model.supports_reasoning_summaries, true);
   assert.equal(model.supports_search_tool, true);
   assert.equal(model.web_search_tool_type, "text_and_image");
-  assert.deepEqual(model.supported_reasoning_levels.map((level) => level.effort), [
+  const efforts = model.supported_reasoning_levels.map((level) => level.effort);
+  assert.deepEqual(efforts, [
     "low",
     "medium",
     "high",
     "xhigh",
     "max",
-    "ultra"
+    "ultra",
+    "ultracode"
   ]);
+  assert.equal(
+    model.supported_reasoning_levels.at(-1)?.description,
+    "Ultracode",
+    "configured descriptions are preserved verbatim"
+  );
 });
 
 test("codex catalog exposes current capabilities for the GPT-5.6 family", () => {
@@ -173,9 +181,17 @@ test("codex catalog exposes current capabilities for the GPT-5.6 family", () => 
       "high",
       "xhigh",
       "max",
-      ...(/-luna$/.test(modelName) ? [] : ["ultra"])
+      ...(/-luna$/.test(modelName) ? [] : ["ultra", "ultracode"])
     ]);
     assert.equal(new Set(efforts).size, efforts.length);
+    if (!/-luna$/.test(modelName)) {
+      // Ultracode is the top tier: it must rank above ultra/max everywhere.
+      assert.equal(efforts.at(-1), "ultracode");
+      assert.equal(
+        model.supported_reasoning_levels.at(-1)?.description,
+        "Beyond-maximum reasoning for multi-agent workloads"
+      );
+    }
     assert.equal(model.default_reasoning_level, "medium");
   }
 });
@@ -624,7 +640,7 @@ test("codex catalog marks prefixed Fusion virtual models with legacy web search 
 
 test("codex catalog inherits reasoning levels from each Fusion alias base model", () => {
   const cases = [
-    ["gpt", "gpt-5.6-sol", ["low", "medium", "high", "xhigh", "max", "ultra"], "medium"],
+    ["gpt", "gpt-5.6-sol", ["low", "medium", "high", "xhigh", "max", "ultra", "ultracode"], "medium"],
     ["anthropic", "claude-sonnet-4.6", ["low", "medium", "high", "max"], "high"],
     ["google", "gemini-3.5-flash", ["minimal", "low", "medium", "high"], "medium"],
     ["kimi", "kimi-for-coding", [], null]

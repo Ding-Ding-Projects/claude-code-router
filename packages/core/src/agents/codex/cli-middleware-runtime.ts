@@ -1516,8 +1516,8 @@ class OpenCodeBotWorker {
     const entry = this.conversationEntry(key) || { sessionId: "", projectDirectory: this.projectDirectory(key), title: "" };
     const value = String(args || "").trim();
     if (!value) return "Current " + setting + ": " + (entry[setting] || "default") + ".";
-    const allowed = setting === "effort" ? new Set(["low", "medium", "high", "xhigh", "max", "ultra", "reset"]) : null;
-    if (allowed && !allowed.has(value)) return "Supported effort values: low, medium, high, xhigh, max, ultra, reset.";
+    const allowed = setting === "effort" ? new Set(["low", "medium", "high", "xhigh", "max", "ultra", "ultracode", "reset"]) : null;
+    if (allowed && !allowed.has(value)) return "Supported effort values: low, medium, high, xhigh, max, ultra, ultracode, reset.";
     entry[setting] = value === "reset" ? "" : value;
     entry.updatedAt = Date.now();
     this.setConversationEntry(key, entry);
@@ -3222,7 +3222,7 @@ class ClaudeCodeAppServer {
         ? entry.effort || thread && thread.reasoningEffort
         : entry[setting] || thread && thread[setting];
     if (!value) return "Current " + setting + ": " + (current || "default") + ".";
-    if (setting === "effort" && !["low", "medium", "high", "xhigh", "max", "ultra", "reset"].includes(value)) return "Supported effort values: low, medium, high, xhigh, max, ultra, reset.";
+    if (setting === "effort" && !["low", "medium", "high", "xhigh", "max", "ultra", "ultracode", "reset"].includes(value)) return "Supported effort values: low, medium, high, xhigh, max, ultra, ultracode, reset.";
     if (setting === "mode" && !["manual", "acceptEdits", "plan", "auto", "dontAsk", "reset"].includes(value)) return "Supported modes: manual, acceptEdits, plan, auto, dontAsk, reset.";
     const next = value === "reset" ? "" : value;
     if (setting === "mode") entry.permissionMode = next;
