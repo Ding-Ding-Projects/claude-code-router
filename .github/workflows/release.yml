@@ -1,248 +1,184 @@
 name: Release
 
+# Build -> package -> publish. That is the whole job.
+#
+# By standing decision this workflow runs NO tests, NO lint and NO type or
+# static-analysis gates, and nothing downstream may be withheld by a code
+# quality verdict. A run fails only when building, packaging or publication
+# itself fails.
+
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.ref }}
+  # Keyed on workflow + ref WITHOUT cancel-in-progress: publishing a release is
+  # a side-effecting operation (tag creation, immutable assets), so an in-flight
+  # run must never be cancelled mid-publish.
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  model-catalog:
-    name: Update model catalog
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Update models.json
-        run: npm run models:update
-
-      - name: Upload model catalog
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-model-catalog
-          path: packages/core/models.json
-          if-no-files-found: error
-          retention-days: 1
-
-  macos:
-    name: macOS (${{ matrix.display_name }})
-    needs: model-catalog
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: arm64
-            arch_flag: --arm64
-            runner: macos-14
-            display_name: Apple Silicon
-            release_label: Apple-Silicon
-            artifact_name: macos-apple-silicon-arm64
-          - arch: x64
-            arch_flag: --x64
-            runner: macos-15-intel
-            display_name: Intel
-            release_label: Intel
-            artifact_name: macos-intel-x64
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Download updated model catalog
-        uses: actions/download-artifact@v4
-        with:
-          name: release-model-catalog
-          path: packages/core
-
-      - name: Verify tag version
-        shell: bash
-        run: |
-          tag_version="${GITHUB_REF_NAME#v}"
-          package_version="$(node -p "require('./package.json').version")"
-          if [[ "$tag_version" != "$package_version" ]]; then
-            echo "Tag v$tag_version does not match package.json version $package_version"
-            exit 1
-          fi
-
-      - name: Build ad-hoc macOS artifacts
-        run: |
-          npm run build:assets
-          npx electron-builder \
-            --config build/electron-builder.local.cjs \
-            --mac ${{ matrix.arch_flag }} \
-            --publish never \
-            -c.mac.artifactName='Claude-Code-Router_${version}-mac-${{ matrix.release_label }}-${arch}.${ext}'
-
-      - name: Upload macOS release files
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact_name }}
-          path: |
-            release-local/Claude-Code-Router_*-mac-${{ matrix.release_label }}-${{ matrix.arch }}.*
-            release-local/latest-mac.yml
-          if-no-files-found: error
-
-  publish-macos:
-    name: Publish macOS
-    needs: macos
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install metadata merge dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Download macOS release files
-        uses: actions/download-artifact@v4
-        with:
-          pattern: macos-*
-          path: macos-release-artifacts
-
-      - name: Merge macOS update metadata
-        run: node build/merge-macos-update-metadata.mjs latest-mac.yml macos-release-artifacts/*/latest-mac.yml
-
-      - name: Create GitHub release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
-            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes
-
-      - name: Upload macOS release assets
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          shopt -s nullglob
-          assets=(macos-release-artifacts/*/Claude-Code-Router_*-mac-*.*)
-          if (( ${#assets[@]} == 0 )); then
-            echo "No macOS release assets were found."
-            exit 1
-          fi
-
-          upload_args=()
-          for asset in "${assets[@]}"; do
-            name="$(basename "$asset")"
-            case "$name" in
-              *Apple-Silicon-arm64.dmg) label="macOS Apple Silicon DMG (arm64)" ;;
-              *Apple-Silicon-arm64.zip) label="macOS Apple Silicon ZIP (arm64)" ;;
-              *Apple-Silicon-arm64.dmg.blockmap) label="macOS Apple Silicon DMG blockmap (arm64)" ;;
-              *Apple-Silicon-arm64.zip.blockmap) label="macOS Apple Silicon ZIP blockmap (arm64)" ;;
-              *Intel-x64.dmg) label="macOS Intel DMG (x64)" ;;
-              *Intel-x64.zip) label="macOS Intel ZIP (x64)" ;;
-              *Intel-x64.dmg.blockmap) label="macOS Intel DMG blockmap (x64)" ;;
-              *Intel-x64.zip.blockmap) label="macOS Intel ZIP blockmap (x64)" ;;
-              *) label="$name" ;;
-            esac
-            upload_args+=("${asset}#${label}")
-          done
-          upload_args+=("latest-mac.yml#macOS update metadata")
-
-          gh release upload "$GITHUB_REF_NAME" "${upload_args[@]}" --clobber
-
-  windows:
-    name: Windows
-    needs: publish-macos
+  windows-installer:
+    name: Build & publish Windows Squirrel installer (unsigned)
     runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.ORG_TOKEN || secrets.GITHUB_TOKEN }}
     steps:
+      - name: Record workflow start time
+        shell: bash
+        run: |
+          echo "WORKFLOW_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Download updated model catalog
-        uses: actions/download-artifact@v4
-        with:
-          name: release-model-catalog
-          path: packages/core
-
-      - name: Verify tag version
+      - name: Install dependencies (npm ci)
         shell: bash
         run: |
-          tag_version="${GITHUB_REF_NAME#v}"
-          package_version="$(node -p "require('./package.json').version")"
-          if [[ "$tag_version" != "$package_version" ]]; then
-            echo "Tag v$tag_version does not match package.json version $package_version"
-            exit 1
-          fi
+          mkdir -p build-logs
+          set -o pipefail
+          npm ci --no-audit --no-fund 2>&1 | tee build-logs/npm-ci.log
 
-      - name: Build and publish Windows artifacts
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build:app:win:release -- --publish always
-
-  linux:
-    name: Linux
-    needs: publish-macos
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Download updated model catalog
-        uses: actions/download-artifact@v4
-        with:
-          name: release-model-catalog
-          path: packages/core
-
-      - name: Verify tag version
+      - name: Build bundled assets (repo script build:assets)
         shell: bash
         run: |
-          tag_version="${GITHUB_REF_NAME#v}"
-          package_version="$(node -p "require('./package.json').version")"
-          if [[ "$tag_version" != "$package_version" ]]; then
-            echo "Tag v$tag_version does not match package.json version $package_version"
+          set -o pipefail
+          npm run build:assets 2>&1 | tee build-logs/build-assets.log
+
+      - name: Package Windows Squirrel installer (repo script build:app:win:local, unsigned)
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build:app:win:local 2>&1 | tee build-logs/electron-builder.log
+
+      - name: Verify packaged artifacts (Setup exe, RELEASES, .nupkg)
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="release-local"
+          shopt -s nullglob
+          setups=("$out"/*Setup*.exe)
+          if [ ${#setups[@]} -eq 0 ]; then setups=("$out"/*.exe); fi
+          nupkgs=("$out"/*.nupkg)
+          if [ ${#setups[@]} -eq 0 ]; then
+            echo "::error::No installer executable was produced under $out/."
+            ls -la "$out" || true
             exit 1
           fi
+          if [ ! -f "$out/RELEASES" ]; then
+            echo "::error::Squirrel RELEASES feed is missing under $out/."
+            ls -la "$out" || true
+            exit 1
+          fi
+          if [ ${#nupkgs[@]} -eq 0 ]; then
+            echo "::error::No .nupkg package was produced under $out/."
+            ls -la "$out" || true
+            exit 1
+          fi
+          echo "Packaged artifacts verified:"
+          for f in "${setups[@]}" "$out/RELEASES" "${nupkgs[@]}"; do
+            printf '  %-70s %10s bytes\n' "$(basename "$f")" "$(stat -c %s "$f")"
+          done
 
-      - name: Build and publish Linux artifacts
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compute unique monotonic release tag (never reused)
+        shell: bash
         run: |
-          npm run build:assets
-          npx electron-builder --linux AppImage --publish always
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}-build${GITHUB_RUN_NUMBER}"
+          if git ls-remote origin "refs/tags/${tag}" | grep -q "refs/tags/${tag}$"; then
+            echo "::error::Tag ${tag} already exists on the remote; refusing to reuse a release tag."
+            exit 1
+          fi
+          echo "RELEASE_TAG=${tag}" >> "$GITHUB_ENV"
+          echo "Release tag: ${tag} (commit ${GITHUB_SHA})"
+
+      - name: Write release notes (timing + line count + honesty statements)
+        shell: bash
+        run: |
+          set -euo pipefail
+          started="${WORKFLOW_STARTED_AT}"
+          completed="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          duration_secs=$(( $(date -u -d "${completed}" +%s) - $(date -u -d "${started}" +%s) ))
+          duration="$(printf '%02d:%02d:%02d' $((duration_secs / 3600)) $(((duration_secs % 3600) / 60)) $((duration_secs % 60)))"
+          {
+            echo "## Claude Code Router ${RELEASE_TAG}"
+            echo
+            echo "- Target commit: \`${GITHUB_SHA}\`"
+            echo "- Workflow started: \`${started}\` (UTC)"
+            echo "- Workflow completed: \`${completed}\` (UTC)"
+            echo "- Workflow duration: \`${duration}\`"
+            echo
+            echo "### Installer"
+            echo
+            echo "Windows Squirrel.Windows build: \`*Setup*.exe\`, \`RELEASES\`, \`.nupkg\`."
+            echo "**The installer is NOT code-signed.** It may trigger an unknown-publisher"
+            echo "or SmartScreen warning; no signature verification is claimed."
+            echo
+            echo "This release is ungated by design: no tests, lint, or type checks ran in"
+            echo "this workflow. Verification happened locally in the task that changed the"
+            echo "code; see the commit history."
+            echo
+            echo "### Line count at this commit"
+            echo
+            echo "Produced by \`node scripts/count-lines.mjs\` over the tagged tree:"
+            echo
+            '```'
+            node scripts/count-lines.mjs
+            '```'
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: Publish GitHub release (non-draft, unique tag)
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "${RELEASE_TAG}" \
+            --target "${GITHUB_SHA}" \
+            --title "Claude Code Router ${RELEASE_TAG}" \
+            --notes-file release-notes.md
+
+      - name: Attach installer assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="release-local"
+          shopt -s nullglob
+          setups=("$out"/*Setup*.exe)
+          if [ ${#setups[@]} -eq 0 ]; then setups=("$out"/*.exe); fi
+          assets=()
+          for f in "${setups[@]}"; do
+            assets+=("${f}#Windows installer (unsigned)")
+          done
+          assets+=("${out}/RELEASES#Squirrel update feed (RELEASES)")
+          for f in "$out"/*.nupkg; do
+            case "$(basename "$f")" in
+              *-delta.nupkg) label="Squirrel delta package" ;;
+              *) label="Squirrel full package" ;;
+            esac
+            assets+=("${f}#${label}")
+          done
+          gh release upload "${RELEASE_TAG}" "${assets[@]}"
+
+      - name: Upload safe build logs
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-${{ github.run_id }}
+          path: build-logs/
+          if-no-files-found: warn
+          retention-days: 7
