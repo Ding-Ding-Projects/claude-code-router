@@ -1,0 +1,273 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { fetchUpstreamWithFallback } from "@ccr/core/gateway/upstream/executor.ts";
+import {
+  WAITING_RETRY_COOLDOWN_MS,
+  parseRetryAfterHeaderMs,
+  startWaitingResponseStream,
+  waitingCooldownMs,
+  waitingKeepAliveChunk
+} from "@ccr/core/gateway/upstream/waiting-retry.ts";
+
+const offConfig = {
+  Providers: [],
+  Router: { fallback: { mode: "off", models: [], retryCount: 0 }, rules: [] },
+  virtualModelProfiles: []
+};
+const offFallback = { mode: "off", models: [], retryCount: 0 };
+
+function withStubbedFetch(stub) {
+  const originalFetch = globalThis.fetch;
+  let fetchCount = 0;
+  const timings = [];
+  globalThis.fetch = async (...args) => {
+    fetchCount += 1;
+    timings.push(Date.now());
+    return await stub(fetchCount, ...args);
+  };
+  return {
+    get count() {
+      return fetchCount;
+    },
+    timings,
+    restore() {
+      globalThis.fetch = originalFetch;
+    }
+  };
+}
+
+function baseInput(overrides = {}) {
+  return {
+    body: Buffer.from(JSON.stringify({ messages: [], model: "test-model" })),
+    config: offConfig,
+    coreAuthToken: "core-token",
+    fallback: offFallback,
+    headers: {},
+    method: "POST",
+    path: "/v1/messages",
+    routedModel: "test-model",
+    upstreamUrl: "http://127.0.0.1:3456/v1/messages",
+    ...overrides
+  };
+}
+
+async function readWholeBody(response) {
+  const reader = response.body.getReader();
+  const chunks = [];
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(Buffer.from(value));
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+test("fixed cooldown defaults to fifteen seconds and honors only longer Retry-After values", () => {
+  assert.equal(WAITING_RETRY_COOLDOWN_MS, 15_000);
+  assert.equal(waitingCooldownMs({ cooldownMs: 15_000 }), 15_000);
+  // A shorter Retry-After never shortens the fixed cooldown.
+  assert.equal(waitingCooldownMs({ cooldownMs: 15_000, retryAfterHeader: "5" }), 15_000);
+  // A longer Retry-After is honored.
+  assert.equal(waitingCooldownMs({ cooldownMs: 15_000, retryAfterHeader: "30" }), 30_000);
+  // HTTP-date form resolves against the supplied clock.
+  const now = Date.parse("2026-01-01T00:00:10Z");
+  assert.equal(parseRetryAfterHeaderMs("Wed, 01 Jan 2026 00:00:35 GMT", now), 25_000);
+  assert.equal(parseRetryAfterHeaderMs("Wed, 01 Jan 2020 00:00:00 GMT", now), 0);
+  assert.equal(waitingCooldownMs({ cooldownMs: 15_000, retryAfterHeader: "not-a-date" }), 15_000);
+});
+
+test("429 with a longer Retry-After extends the cooldown before the next attempt", async () => {
+  const stub = withStubbedFetch((count) => count === 1
+    ? new Response(null, {
+        headers: { "content-type": "application/json", "retry-after": "0.09" },
+        status: 429
+      })
+    : new Response('{"ok":true}', {
+        headers: { "content-type": "application/json" },
+        status: 200
+      }));
+  try {
+    const result = await fetchUpstreamWithFallback(baseInput({
+      waitingRetry: { cooldownMs: 20 }
+    }));
+    assert.equal(result.response.status, 200);
+    assert.equal(stub.count, 2);
+    assert.ok(stub.timings[1] - stub.timings[0] >= 80, `second fetch waited ${stub.timings[1] - stub.timings[0]}ms`);
+    assert.equal(result.failedAttempts.length, 1);
+    assert.equal(result.failedAttempts[0].statusCode, 429);
+    assert.equal(result.failedAttempts[0].delayMs, 90);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("500 responses are retried silently until success on the third attempt", async () => {
+  const stub = withStubbedFetch((count) => new Response(`{"attempt":${count}}`, {
+    headers: { "content-type": "application/json" },
+    status: count < 3 ? 500 : 200
+  }));
+  try {
+    const result = await fetchUpstreamWithFallback(baseInput({
+      waitingRetry: { cooldownMs: 10 }
+    }));
+    assert.equal(stub.count, 3);
+    assert.equal(result.response.status, 200);
+    assert.equal(await result.response.text(), '{"attempt":3}');
+    assert.deepEqual(result.failedAttempts.map((attempt) => attempt.statusCode), [500, 500]);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("network resets are retried like HTTP failures", async () => {
+  const stub = withStubbedFetch(async (count) => {
+    if (count < 3) {
+      throw new Error("read ECONNRESET: connection reset by peer");
+    }
+    return new Response('{"ok":true}', {
+      headers: { "content-type": "application/json" },
+      status: 200
+    });
+  });
+  try {
+    const result = await fetchUpstreamWithFallback(baseInput({
+      waitingRetry: { cooldownMs: 10 }
+    }));
+    assert.deepEqual(result.failedAttempts.map((attempt) => attempt.error?.includes("ECONNRESET")), [true, true], `fetchCount=${stub.count} statuses=${JSON.stringify(result.failedAttempts.map((a) => a.statusCode))}`);
+    assert.equal(stub.count, 3);
+    assert.equal(result.response.status, 200);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("eventual success streams through the held-open SSE response after keep-alive frames", async () => {
+  const stub = withStubbedFetch((count) => count < 3
+    ? new Response('{"error":{"type":"overloaded_error"}}', {
+        headers: { "content-type": "application/json" },
+        status: 429
+      })
+    : new Response('event: message_start\ndata: {"type":"message_start"}\n\n', {
+        headers: { "content-type": "text/event-stream" },
+        status: 200
+      }));
+  try {
+    const startedAt = Date.now();
+    const result = await fetchUpstreamWithFallback(baseInput({
+      body: Buffer.from(JSON.stringify({ messages: [], model: "test-model", stream: true })),
+      waitingRetry: { cooldownMs: 40, keepAliveIntervalMs: 10 }
+    }));
+    const elapsed = Date.now() - startedAt;
+
+    assert.equal(stub.count, 3);
+    assert.equal(result.response.status, 200);
+    assert.ok(result.response.headers.get("content-type").includes("text/event-stream"));
+    const clientBody = await readWholeBody(result.response);
+    // /v1/messages resolves to the anthropic protocol, so frames are pings.
+    const expectedFrame = waitingKeepAliveChunk("anthropic_messages");
+    const keepAliveFrames = clientBody.split(expectedFrame).length - 1;
+    assert.ok(elapsed >= 80, `waited only ${elapsed}ms`);
+    assert.ok(keepAliveFrames >= 3, `expected several keep-alive frames, saw ${keepAliveFrames} in ${JSON.stringify(clientBody)}`);
+    assert.ok(clientBody.endsWith('event: message_start\ndata: {"type":"message_start"}\n\n'));
+    // Every keep-alive must precede the adopted upstream body.
+    const adoptedBodyStart = clientBody.indexOf("event: message_start");
+    assert.ok(adoptedBodyStart > 0);
+    assert.ok(clientBody.slice(0, adoptedBodyStart).includes(expectedFrame));
+    assert.deepEqual(result.failedAttempts.map((attempt) => attempt.statusCode), [429, 429]);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("keep-alive frames are emitted on the configured cadence and stop on abort", async () => {
+  const controller = new AbortController();
+  const instance = startWaitingResponseStream({
+    intervalMs: 10,
+    keepAliveChunk: () => ": keep-alive\n\n",
+    signal: controller.signal
+  });
+  const stamps = [];
+  const reader = instance.response.body.getReader();
+  const collector = (async () => {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      stamps.push(Date.now());
+      assert.equal(Buffer.from(value).toString("utf8"), ": keep-alive\n\n");
+    }
+  })();
+  await new Promise((resolve) => setTimeout(resolve, 55));
+  const framesBeforeAbort = stamps.length;
+  assert.ok(framesBeforeAbort >= 4, `expected >=4 frames in 55ms at 10ms cadence, saw ${framesBeforeAbort}`);
+  controller.abort(new Error("client disconnected"));
+  await collector;
+  await new Promise((resolve) => setTimeout(resolve, 40));
+  assert.equal(stamps.length, framesBeforeAbort, "no frames may be emitted after the client abort");
+});
+
+test("anthropic protocol receives its own ping event as the keep-alive frame", () => {
+  assert.equal(waitingKeepAliveChunk("anthropic_messages"), 'event: ping\ndata: {"type":"ping"}\n\n');
+  assert.equal(waitingKeepAliveChunk("openai_chat_completions"), ": keep-alive\n\n");
+  assert.equal(waitingKeepAliveChunk(undefined), ": keep-alive\n\n");
+});
+
+test("client disconnect during the cooldown gives up with no further upstream attempts", async () => {
+  const stub = withStubbedFetch(() => new Response(null, { status: 429 }));
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(new Error("client disconnected")), 30);
+  try {
+    await assert.rejects(
+      fetchUpstreamWithFallback(baseInput({
+        signal: controller.signal,
+        waitingRetry: { cooldownMs: 250 }
+      })),
+      (error) => {
+        assert.match(error.message, /client disconnected/);
+        assert.equal(error.name, "UpstreamRequestError");
+        return true;
+      }
+    );
+    assert.equal(stub.count, 1);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("non-streaming JSON requests stop waiting after the max budget and receive a clear 503", async () => {
+  const stub = withStubbedFetch(() => new Response('{"error":"down"}', { status: 503 }));
+  try {
+    const startedAt = Date.now();
+    const result = await fetchUpstreamWithFallback(baseInput({
+      waitingRetry: { cooldownMs: 15, maxNonStreamingWaitMs: 60 }
+    }));
+    const elapsed = Date.now() - startedAt;
+    assert.equal(result.response.status, 503);
+    // The budget is a ceiling on waiting, never a floor.
+    assert.ok(elapsed <= 1_000, `waited ${elapsed}ms, far past the 60ms budget`);
+    assert.ok(stub.count >= 2, "at least one background retry must happen before giving up");
+    const payload = JSON.parse(await result.response.text());
+    assert.equal(payload.type, "error");
+    assert.equal(payload.error.type, "overloaded_error");
+    assert.match(payload.error.message, /retried in the background/);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("permanent client-class failures still pass through immediately and unchanged", async () => {
+  const stub = withStubbedFetch(() => new Response('{"bad":"request"}', {
+    headers: { "content-type": "application/json" },
+    status: 400
+  }));
+  try {
+    const result = await fetchUpstreamWithFallback(baseInput({
+      waitingRetry: { cooldownMs: 10 }
+    }));
+    assert.equal(stub.count, 1, "a 400 must never enter the retry loop");
+    assert.equal(result.response.status, 400);
+    assert.equal(await result.response.text(), '{"bad":"request"}');
+    assert.equal(result.failedAttempts.length, 0);
+  } finally {
+    stub.restore();
+  }
+});
