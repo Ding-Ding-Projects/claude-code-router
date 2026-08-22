@@ -62,6 +62,27 @@ const TEST_SEGMENT = new Set(["test", "tests", "__tests__", "spec"]);
 const TEST_FILENAME = /\.(test|spec)\.[cm]?[jt]sx?$/i;
 
 // ---------------------------------------------------------------------------
+// Exclusion accumulators.
+//
+// These MUST be declared before walk(ROOT) runs below: walk() reports every
+// skipped directory through recordExcluded() as it goes, and recordExcluded
+// writes into these. As module-level consts they would sit in their temporal
+// dead zone during the walk and throw "Cannot access 'excluded' before
+// initialization" the moment the tree contains an excluded directory such as
+// node_modules/ (which CI always has after npm ci).
+// ---------------------------------------------------------------------------
+
+const excluded = {
+  dirs: empty(),
+  lockfiles: empty(),
+  generated: empty(),
+  binary: empty(),
+};
+
+// Per-excluded-directory rollup so each row names what was skipped.
+const dirRollup = new Map();
+
+// ---------------------------------------------------------------------------
 // Walk
 // ---------------------------------------------------------------------------
 
@@ -107,12 +128,6 @@ function countText(content) {
 }
 
 const counted = { source: empty(), tests: empty(), stylesMarkup: empty(), other: empty() };
-const excluded = {
-  dirs: empty(),
-  lockfiles: empty(),
-  generated: empty(),
-  binary: empty(),
-};
 
 function empty() {
   return { files: 0, lines: 0, nonBlank: 0 };
@@ -122,8 +137,6 @@ function add(bucket, path, stats) {
   bucket.lines += stats.lines;
   bucket.nonBlank += stats.nonBlank;
 }
-// Per-excluded-directory rollup so the row names what was skipped.
-const dirRollup = new Map();
 function recordExcluded(kind, relPath, stats) {
   add(excluded[kind], relPath, stats ?? { lines: 0, nonBlank: 0 });
   const top = relPath.split(sep)[0];
