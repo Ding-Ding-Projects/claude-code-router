@@ -2,6 +2,7 @@
 @import "./m3/tokens.css";
 @import "./m3/primitives.css";
 @import "./m3/legacy-bridge.css";
+@import "./m3/utilities.css";
 @source "../pages/**/*.{html,ts,tsx}";
 @source "../components/**/*.{ts,tsx}";
 @source "../lib/**/*.{ts,tsx}";

@@ -157,7 +157,7 @@ export function MainLayout({
           aria-controls="primary-sidebar"
           aria-expanded={sidebarOpen}
           aria-label={sidebarOpen ? copy.sidebar.collapse : copy.sidebar.expand}
-          className="app-sidebar-toggle inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent bg-transparent p-0 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/25"
+          className="app-sidebar-toggle inline-flex h-8 w-8 items-center justify-center rounded-full p-0 text-[var(--md-sys-color-on-surface-variant)] outline-none transition-colors duration-[var(--md-sys-motion-duration-short3)] ease-[var(--md-sys-motion-easing-standard)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,transparent)] hover:text-[var(--md-sys-color-on-surface)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--md-sys-color-primary)]"
           onMouseDown={(event) => event.stopPropagation()}
           onClick={onToggleSidebar}
           title={sidebarOpen ? copy.sidebar.collapse : copy.sidebar.expand}
@@ -220,7 +220,7 @@ export function MainLayout({
             <nav className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-2 py-3 max-[720px]:flex-none max-[720px]:flex-row max-[720px]:gap-1 max-[720px]:overflow-x-auto max-[720px]:overflow-y-hidden max-[720px]:py-2" aria-label={copy.sidebar.primaryNavigation}>
               {navigationGroups.map((group) => (
                 <div className="grid min-w-0 gap-1 max-[720px]:contents" key={group.id}>
-                  <div className="px-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/65 max-[720px]:hidden">
+                  <div className="md-type-label-small px-2 uppercase tracking-wide text-[var(--md-sys-color-outline)] max-[720px]:hidden">
                     {copy.text[group.label] ?? group.label}
                   </div>
                   <div className="grid min-w-0 gap-1 max-[720px]:contents">
@@ -241,13 +241,13 @@ export function MainLayout({
 
             <div className="grid shrink-0 gap-1 border-t border-border/60 p-2 max-[720px]:border-t max-[720px]:pt-2">
               <Button
-                className="flex h-9 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-[12px] font-medium text-muted-foreground transition-all duration-150 hover:bg-muted/80 hover:text-foreground"
+                className="md-type-label-large flex h-10 w-full min-w-0 items-center gap-3 rounded-full px-4 text-left text-[var(--md-sys-color-on-surface-variant)] outline-none transition-colors duration-[var(--md-sys-motion-duration-short3)] ease-[var(--md-sys-motion-easing-standard)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,transparent)] hover:text-[var(--md-sys-color-on-surface)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--md-sys-color-primary)]"
                 onClick={onOpenSettings}
                 title={copy.settings.title}
                 type="button"
                 unstyled
               >
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
                   <Settings className="h-3.5 w-3.5" />
                 </span>
                 <span className="min-w-0 flex-1 truncate">{copy.settings.button}</span>
@@ -315,20 +315,17 @@ function SidebarNavigationButton({
   return (
     <Button
       className={cn(
-        "flex h-9 min-w-0 items-center gap-2 rounded-md px-2 text-left text-[12px] font-medium text-muted-foreground transition-all duration-150 max-[720px]:min-w-[118px]",
+        "md-type-label-large flex h-10 min-w-0 items-center gap-3 rounded-full px-4 text-left outline-none transition-colors duration-[var(--md-sys-motion-duration-short3)] ease-[var(--md-sys-motion-easing-standard)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--md-sys-color-primary)] max-[720px]:min-w-[118px]",
         active
-          ? "bg-card text-foreground shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
-          : "hover:bg-muted/80 hover:text-foreground"
+          ? "bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]"
+          : "text-[var(--md-sys-color-on-surface-variant)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,transparent)] hover:text-[var(--md-sys-color-on-surface)]"
       )}
       onClick={onClick}
       type="button"
       unstyled
     >
       <motion.span
-        className={cn(
-          "flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors",
-          active && "bg-primary/10 text-primary"
-        )}
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors"
         layout="position"
         transition={shouldReduceMotion ? reducedMotionTransition : listSpringTransition}
       >
@@ -364,7 +361,7 @@ export function UpdateEntryButton({
   return (
     <Button
       aria-label={label}
-      className="app-no-drag relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent bg-transparent p-0 text-primary outline-none transition-colors hover:bg-primary/10 hover:text-primary focus-visible:ring-2 focus-visible:ring-ring/25"
+      className="app-no-drag relative inline-flex h-8 w-8 items-center justify-center rounded-full p-0 text-[var(--md-sys-color-primary)] outline-none transition-colors duration-[var(--md-sys-motion-duration-short3)] ease-[var(--md-sys-motion-easing-standard)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-primary)_8%,transparent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--md-sys-color-primary)]"
       onMouseDown={(event) => event.stopPropagation()}
       onClick={onOpen}
       title={label}
@@ -408,19 +405,19 @@ export function GatewayStartupErrorBanner({
     <div
       aria-live="assertive"
       className={cn(
-        "app-no-drag flex min-w-0 items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[12px] text-destructive",
+        "app-no-drag md-type-body-medium flex min-w-0 items-start gap-3 rounded-[var(--md-sys-shape-corner-medium)] bg-[var(--md-sys-color-error-container)] px-4 py-3 text-[var(--md-sys-color-on-error-container)] shadow-[var(--md-elevation-level1)]",
         className
       )}
       role="alert"
     >
       <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
       <div className="min-w-0 flex-1">
-        <div className="font-semibold">{t("Service failed to start")}</div>
+        <div className="md-type-title-small">{t("Service failed to start")}</div>
         <div className="mt-0.5 whitespace-pre-wrap break-words">{detail}</div>
       </div>
       {onOpenServerSettings ? (
         <Button
-          className="shrink-0 border-destructive/30 bg-background/80 text-destructive hover:bg-destructive/10"
+          className="shrink-0 border-[color-mix(in_srgb,var(--md-sys-color-error)_60%,transparent)] bg-transparent text-[var(--md-sys-color-on-error-container)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-error)_12%,transparent)] hover:text-[var(--md-sys-color-on-error-container)]"
           onClick={onOpenServerSettings}
           size="sm"
           type="button"

@@ -1,0 +1,113 @@
+/*
+ * Material 3 helper utilities for surfaces converting to the token system.
+ *
+ * These consume --md-sys-typescale-* directly so call sites apply whole type
+ * roles (size, weight, tracking, line height) with one class instead of four
+ * arbitrary Tailwind values. They set typography only — colour stays with the
+ * caller.
+ */
+
+.md-type-display-large {
+  font-size: var(--md-sys-typescale-display-large-font-size);
+  font-weight: var(--md-sys-typescale-display-large-font-weight);
+  letter-spacing: var(--md-sys-typescale-display-large-letter-spacing);
+  line-height: var(--md-sys-typescale-display-large-line-height);
+}
+
+.md-type-display-medium {
+  font-size: var(--md-sys-typescale-display-medium-font-size);
+  font-weight: var(--md-sys-typescale-display-medium-font-weight);
+  letter-spacing: var(--md-sys-typescale-display-medium-letter-spacing);
+  line-height: var(--md-sys-typescale-display-medium-line-height);
+}
+
+.md-type-display-small {
+  font-size: var(--md-sys-typescale-display-small-font-size);
+  font-weight: var(--md-sys-typescale-display-small-font-weight);
+  letter-spacing: var(--md-sys-typescale-display-small-letter-spacing);
+  line-height: var(--md-sys-typescale-display-small-line-height);
+}
+
+.md-type-headline-large {
+  font-size: var(--md-sys-typescale-headline-large-font-size);
+  font-weight: var(--md-sys-typescale-headline-large-font-weight);
+  letter-spacing: var(--md-sys-typescale-headline-large-letter-spacing);
+  line-height: var(--md-sys-typescale-headline-large-line-height);
+}
+
+.md-type-headline-medium {
+  font-size: var(--md-sys-typescale-headline-medium-font-size);
+  font-weight: var(--md-sys-typescale-headline-medium-font-weight);
+  letter-spacing: var(--md-sys-typescale-headline-medium-letter-spacing);
+  line-height: var(--md-sys-typescale-headline-medium-line-height);
+}
+
+.md-type-headline-small {
+  font-size: var(--md-sys-typescale-headline-small-font-size);
+  font-weight: var(--md-sys-typescale-headline-small-font-weight);
+  letter-spacing: var(--md-sys-typescale-headline-small-letter-spacing);
+  line-height: var(--md-sys-typescale-headline-small-line-height);
+}
+
+.md-type-title-large {
+  font-size: var(--md-sys-typescale-title-large-font-size);
+  font-weight: var(--md-sys-typescale-title-large-font-weight);
+  letter-spacing: var(--md-sys-typescale-title-large-letter-spacing);
+  line-height: var(--md-sys-typescale-title-large-line-height);
+}
+
+.md-type-title-medium {
+  font-size: var(--md-sys-typescale-title-medium-font-size);
+  font-weight: var(--md-sys-typescale-title-medium-font-weight);
+  letter-spacing: var(--md-sys-typescale-title-medium-letter-spacing);
+  line-height: var(--md-sys-typescale-title-medium-line-height);
+}
+
+.md-type-title-small {
+  font-size: var(--md-sys-typescale-title-small-font-size);
+  font-weight: var(--md-sys-typescale-title-small-font-weight);
+  letter-spacing: var(--md-sys-typescale-title-small-letter-spacing);
+  line-height: var(--md-sys-typescale-title-small-line-height);
+}
+
+.md-type-body-large {
+  font-size: var(--md-sys-typescale-body-large-font-size);
+  font-weight: var(--md-sys-typescale-body-large-font-weight);
+  letter-spacing: var(--md-sys-typescale-body-large-letter-spacing);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+}
+
+.md-type-body-medium {
+  font-size: var(--md-sys-typescale-body-medium-font-size);
+  font-weight: var(--md-sys-typescale-body-medium-font-weight);
+  letter-spacing: var(--md-sys-typescale-body-medium-letter-spacing);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+}
+
+.md-type-body-small {
+  font-size: var(--md-sys-typescale-body-small-font-size);
+  font-weight: var(--md-sys-typescale-body-small-font-weight);
+  letter-spacing: var(--md-sys-typescale-body-small-letter-spacing);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+}
+
+.md-type-label-large {
+  font-size: var(--md-sys-typescale-label-large-font-size);
+  font-weight: var(--md-sys-typescale-label-large-font-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-letter-spacing);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+}
+
+.md-type-label-medium {
+  font-size: var(--md-sys-typescale-label-medium-font-size);
+  font-weight: var(--md-sys-typescale-label-medium-font-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-letter-spacing);
+  line-height: var(--md-sys-typescale-label-medium-line-height);
+}
+
+.md-type-label-small {
+  font-size: var(--md-sys-typescale-label-small-font-size);
+  font-weight: var(--md-sys-typescale-label-small-font-weight);
+  letter-spacing: var(--md-sys-typescale-label-small-letter-spacing);
+  line-height: var(--md-sys-typescale-label-small-line-height);
+}
