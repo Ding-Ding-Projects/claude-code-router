@@ -1881,6 +1881,17 @@ function downloadJson(filename, text) {
  * Mutation observer: poll store state, journal every visitor-owned change.
  * ========================================================================== */
 let lastDump = null;
+/** Keys whose changes are journaled through richer dedicated paths, or are
+ *  transient UI state — excluded from the generic observer. */
+function observedKeyExcluded(k) {
+  return (
+    k === JOURNAL_STORE_KEY || // the journal itself
+    k === SCHEDULE_STORE_KEY || // rules journal individually as rule:<id>
+    k.startsWith('schedule.base.') || // applier bookkeeping
+    k.startsWith('search.') || // transient query state
+    k === 'notify.history' // its own centre owns deletions
+  );
+}
 export function observeMutations(intervalMs = 20000) {
   if (!inBrowser) return;
   lastDump = store.dumpAll();
@@ -1888,7 +1899,7 @@ export function observeMutations(intervalMs = 20000) {
     const nowDump = store.dumpAll();
     const keys = new Set([...Object.keys(lastDump), ...Object.keys(nowDump)]);
     for (const k of keys) {
-      if (k === JOURNAL_STORE_KEY || k.startsWith('schedule.base.')) continue; // journal + applier bookkeeping
+      if (observedKeyExcluded(k)) continue;
       const before = lastDump[k];
       const after = nowDump[k];
       if (JSON.stringify(before) === JSON.stringify(after)) continue;
