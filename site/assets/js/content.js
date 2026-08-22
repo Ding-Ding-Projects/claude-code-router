@@ -110,6 +110,17 @@ const L = {
   'dl.download': { en: 'Download', zh: '下載' },
 };
 
+/** Local el() wrapper that accepts children as extra arguments (the core
+ * util el() takes children only via opts.children). */
+function elt(tag, opts = {}, ...children) {
+  const node = el(tag, opts);
+  for (const c of children) {
+    if (c == null || c === false) continue;
+    node.append(c);
+  }
+  return node;
+}
+
 /** Resolve one local entry honouring language mode + funny level (facts stay exact). */
 function ctRaw(entry) {
   const lang = i18n.getLang() === 'zh' ? 'zh' : 'en';
@@ -194,10 +205,14 @@ const EMOJI = {
   rotating_light: '🚨', lipstick: '💄', alembic: '⚗️', pencil2: '✏️',
 };
 
-const INLINE_RE =
-  /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(__[^_\n]+__)|(\*[^*\n]+\*)|(\[[^\]\n]*\]\([^)\s]*\))|(https?:\/\/[^\s<>()"']+)|(:[a-zA-Z0-9_+-]+:)/g;
-
-const HEX_RE = /\b[0-9a-f]{7,40}\b/gi;
+/**
+ * Inline tokenizer source. IMPORTANT: this is a SOURCE STRING compiled fresh
+ * for every parseInline() call — a shared /g regex object would let a
+ * recursive call (bold/italic/link labels recurse) reset lastIndex under the
+ * iterating caller and hang the renderer in an infinite loop.
+ */
+export const INLINE_SOURCE =
+  '(`[^`\\n]+`)|(\\*\\*[^*\\n]+\\*\\*)|(__[^_\\n]+__)|(\\*[^*\\n]+\\*)|(\\[[^\\]\\n]*\\]\\([^)\\s]*\\))|(https?:\\/\\/[^\\s<>()"\']+)|(:[a-zA-Z0-9_+-]+:)';
 
 export function slugify(text) {
   return String(text)
@@ -214,15 +229,15 @@ export function slugify(text) {
  */
 export function parseInline(raw, parent, opts = {}) {
   const src = String(raw);
+  const re = new RegExp(INLINE_SOURCE, 'g'); // per-call instance — see note above
   let last = 0;
   let m;
-  INLINE_RE.lastIndex = 0;
   const seenHex = new Set();
-  while ((m = INLINE_RE.exec(src)) !== null) {
+  while ((m = re.exec(src)) !== null) {
     if (m.index > last) emitPlain(parent, src.slice(last, m.index), opts, seenHex);
     const tok = m[0];
     if (tok.startsWith('`')) {
-      parent.append(el('code', { class: 'ccr-md-code' }, tok.slice(1, -1)));
+      parent.append(elt('code', { class: 'ccr-md-code' }, tok.slice(1, -1)));
     } else if (tok.startsWith('**') || tok.startsWith('__')) {
       const b = el('strong');
       parseInline(tok.slice(2, -2), b, opts);
@@ -255,10 +270,12 @@ function emitPlain(parent, text, opts, seenHex) {
     parent.append(document.createTextNode(text));
     return;
   }
+  // Local regex: emitPlain can run inside buildLink→parseInline of an outer
+  // scan, so a shared /g object would corrupt the outer iteration.
+  const hexRe = /\b[0-9a-f]{7,40}\b/gi;
   let last = 0;
   let m;
-  HEX_RE.lastIndex = 0;
-  while ((m = HEX_RE.exec(text)) !== null) {
+  while ((m = hexRe.exec(text)) !== null) {
     const tok = m[0];
     // Require at least one digit or length >= 8 so hex-only English words
     // ("defaced") do not become fake commit links.
@@ -328,7 +345,7 @@ export function renderMarkdown(md, opts = {}) {
         class: 'ccr-md-pre',
         attrs: { tabindex: '0', 'aria-label': fence[2] ? `Code block (${fence[2]})` : 'Code block' },
       });
-      pre.append(el('code', { class: 'ccr-md-codeblock' }, buf.join('\n')));
+      pre.append(elt('code', { class: 'ccr-md-codeblock' }, buf.join('\n')));
       frag.append(pre);
       continue;
     }
@@ -632,7 +649,7 @@ function mountFeatures(host) {
   const grid = el('div', { class: 'card-grid' });
   for (const article of ARTICLES) {
     const card = el('article', { class: 'card ccr-feature-card' });
-    const title = el('h3', {}, article.title);
+    const title = elt('h3', {}, article.title);
     card.append(title);
     if (article.status) {
       const chip = el('span', { class: 'ccr-chip-status' });
@@ -642,9 +659,9 @@ function mountFeatures(host) {
       chip.setAttribute('role', 'status');
       card.append(chip);
     }
-    card.append(el('p', { class: 'sum body-medium' }, article.summary || ''));
+    card.append(elt('p', { class: 'sum body-medium' }, article.summary || ''));
     const actions = el('div', { class: 'ccr-feature-actions' });
-    const readBtn = el('button', { class: 'btn btn--tonal', type: 'button' }, ct('content.features.read'));
+    const readBtn = elt('button', { class: 'btn btn--tonal', type: 'button' }, ct('content.features.read'));
     readBtn.addEventListener('click', () => openArticle(article.id));
     actions.append(readBtn);
     card.append(actions);
@@ -703,22 +720,22 @@ function paintDocsView() {
 
 function paintDocList() {
   const list = docsFilteredArticles();
-  const count = el('div', { class: 'ccr-count', attrs: { role: 'status' } }, ct('docs.count', { n: list.length }));
+  const count = elt('div', { class: 'ccr-count', attrs: { role: 'status' } }, ct('docs.count', { n: list.length }));
   docsView.append(count);
   if (!list.length) {
-    docsView.append(el('div', { class: 'ccr-empty' }, ct('docs.empty')));
+    docsView.append(elt('div', { class: 'ccr-empty' }, ct('docs.empty')));
     return;
   }
   const wrap = el('div', { class: 'ccr-doc-list' });
   for (const a of list) {
     const row = el('button', { class: 'ccr-doc-row', type: 'button' });
-    row.append(el('span', { class: 't' }, a.title));
+    row.append(elt('span', { class: 't' }, a.title));
     if (a.status) {
-      const chip = el('span', { class: 'ccr-chip-status' }, `${ct('content.status.label')}: ${a.status}`);
+      const chip = elt('span', { class: 'ccr-chip-status' }, `${ct('content.status.label')}: ${a.status}`);
       chip.style.justifySelf = 'start';
       row.append(chip);
     }
-    row.append(el('span', { class: 's' }, a.summary || ''));
+    row.append(elt('span', { class: 's' }, a.summary || ''));
     row.addEventListener('click', () => openArticle(a.id));
     wrap.append(row);
   }
@@ -727,7 +744,7 @@ function paintDocList() {
 
 function paintArticle(article) {
   const backRow = el('div', { class: 'ccr-back-row' });
-  const back = el('button', { class: 'btn btn--text', type: 'button' }, ct('docs.back'));
+  const back = elt('button', { class: 'btn btn--text', type: 'button' }, ct('docs.back'));
   back.addEventListener('click', () => {
     store.reset('docs.selected');
     paintDocsView();
@@ -755,7 +772,7 @@ function paintArticle(article) {
       class: 'ccr-suggested',
       attrs: { 'aria-label': ct('docs.suggested') },
     });
-    sug.append(el('h4', {}, ct('docs.suggested')));
+    sug.append(elt('h4', {}, ct('docs.suggested')));
     const row = el('div', { class: 'ccr-suggest-row' });
     for (const s of suggestions) {
       const btn = el('button', { class: 'chip', type: 'button' });
@@ -892,9 +909,9 @@ function mountChangelog(slot) {
   paintClDateLabel();
   clDateBtn.addEventListener('click', () => openCalendar(clDateBtn));
 
-  const exportMd = el('button', { class: 'btn btn--text', type: 'button' }, ct('cl.export.md'));
+  const exportMd = elt('button', { class: 'btn btn--text', type: 'button' }, ct('cl.export.md'));
   exportMd.addEventListener('click', () => exportChangelog('md'));
-  const exportTxt = el('button', { class: 'btn btn--text', type: 'button' }, ct('cl.export.txt'));
+  const exportTxt = elt('button', { class: 'btn btn--text', type: 'button' }, ct('cl.export.txt'));
   exportTxt.addEventListener('click', () => exportChangelog('text'));
 
   clToolbar.append(clDateBtn, exportMd, exportTxt);
@@ -937,7 +954,7 @@ function paintClView() {
   clView.append(countLine);
 
   if (!shown) {
-    clView.append(el('div', { class: 'ccr-empty' }, ct('cl.empty')));
+    clView.append(elt('div', { class: 'ccr-empty' }, ct('cl.empty')));
     return;
   }
 
@@ -948,8 +965,8 @@ function paintClView() {
   for (const entry of shownDated) clView.append(renderClEntry(entry, commitOpts));
 
   if (shownUndated.length) {
-    clView.append(el('h3', { class: 'headline-small', style: 'margin-top:22px' }, ct('cl.undated.group')));
-    clView.append(el('p', { class: 'ccr-cl-note' }, ct('cl.undated.note')));
+    clView.append(elt('h3', { class: 'headline-small', style: 'margin-top:22px' }, ct('cl.undated.group')));
+    clView.append(elt('p', { class: 'ccr-cl-note' }, ct('cl.undated.note')));
     for (const entry of shownUndated) clView.append(renderClEntry(entry, commitOpts));
   }
 }
@@ -957,13 +974,13 @@ function paintClView() {
 function renderClEntry(entry, inlineOpts) {
   const card = el('article', { class: 'ccr-cl-entry', attrs: { 'aria-label': `Version ${entry.version}` } });
   const head = el('div', { class: 'ccr-cl-head' });
-  head.append(el('span', { class: 'ccr-cl-version' }, entry.version));
-  if (entry.dateText) head.append(el('span', { class: 'ccr-cl-date' }, entry.dateText));
+  head.append(elt('span', { class: 'ccr-cl-version' }, entry.version));
+  if (entry.dateText) head.append(elt('span', { class: 'ccr-cl-date' }, entry.dateText));
   card.append(head);
 
   for (const cat of entry.categories) {
     if (!cat.items.length) continue;
-    card.append(el('div', { class: 'ccr-cl-cat' }, cat.name));
+    card.append(elt('div', { class: 'ccr-cl-cat' }, cat.name));
     const ul = el('ul', { class: 'ccr-md-list' });
     for (const item of cat.items) {
       const li = el('li');
@@ -1050,16 +1067,16 @@ function openCalendar(trigger) {
 
   /* header: prev / month / year / next */
   const head = el('div', { class: 'ccr-cal-head' });
-  const prevBtn = el('button', { class: 'icon-btn', type: 'button', attrs: { 'aria-label': ct('cl.cal.prev') } }, '‹');
-  const nextBtn = el('button', { class: 'icon-btn', type: 'button', attrs: { 'aria-label': ct('cl.cal.next') } }, '›');
+  const prevBtn = elt('button', { class: 'icon-btn', type: 'button', attrs: { 'aria-label': ct('cl.cal.prev') } }, '‹');
+  const nextBtn = elt('button', { class: 'icon-btn', type: 'button', attrs: { 'aria-label': ct('cl.cal.next') } }, '›');
   const monthSel = el('select', { class: 'select', attrs: { 'aria-label': 'Month' } });
   const yearSel = el('select', { class: 'select', attrs: { 'aria-label': 'Year' } });
   const zh = i18n.getLang() === 'zh';
   MONTH_EN.forEach((mEn, idx) => {
-    monthSel.append(el('option', { attrs: { value: String(idx) } }, zh ? MONTH_ZH[idx] : mEn));
+    monthSel.append(elt('option', { attrs: { value: String(idx) } }, zh ? MONTH_ZH[idx] : mEn));
   });
   for (let y = today.getFullYear() - 6; y <= today.getFullYear() + 2; y++) {
-    yearSel.append(el('option', { attrs: { value: String(y) } }, String(y)));
+    yearSel.append(elt('option', { attrs: { value: String(y) } }, String(y)));
   }
   head.append(prevBtn, monthSel, yearSel, nextBtn);
   pop.append(head);
@@ -1071,9 +1088,9 @@ function openCalendar(trigger) {
   const typed = el('div', { class: 'ccr-cal-typed' });
   const fromInput = el('input', { class: 'input', attrs: { type: 'text', inputmode: 'numeric', placeholder: fmtTypedHint(), spellcheck: 'false' } });
   const toInput = el('input', { class: 'input', attrs: { type: 'text', inputmode: 'numeric', placeholder: fmtTypedHint(), spellcheck: 'false' } });
-  const fromLab = el('label', {}, ct('cl.cal.from'));
+  const fromLab = elt('label', {}, ct('cl.cal.from'));
   fromInput.id = 'ccr-cal-from-input'; fromLab.setAttribute('for', fromInput.id); fromLab.append(fromInput);
-  const toLab = el('label', {}, ct('cl.cal.to'));
+  const toLab = elt('label', {}, ct('cl.cal.to'));
   toInput.id = 'ccr-cal-to-input'; toLab.setAttribute('for', toInput.id); toLab.append(toInput);
   typed.append(fromLab, toLab);
   pop.append(typed);
@@ -1090,7 +1107,7 @@ function openCalendar(trigger) {
     ['cl.preset.90', 90],
   ];
   for (const [key, days] of presets) {
-    const chip = el('button', { class: 'chip', type: 'button' }, ct(key));
+    const chip = elt('button', { class: 'chip', type: 'button' }, ct(key));
     chip.addEventListener('click', () => {
       const end = new Date(today);
       const start = new Date(today);
@@ -1102,7 +1119,7 @@ function openCalendar(trigger) {
     });
     presetRow.append(chip);
   }
-  const yearChip = el('button', { class: 'chip', type: 'button' }, ct('cl.preset.year'));
+  const yearChip = elt('button', { class: 'chip', type: 'button' }, ct('cl.preset.year'));
   yearChip.addEventListener('click', () => {
     edit.from = `${today.getFullYear()}-01-01`;
     edit.to = isoOf(today);
@@ -1114,9 +1131,9 @@ function openCalendar(trigger) {
 
   /* actions */
   const actions = el('div', { class: 'dialog-actions' });
-  const applyBtn = el('button', { class: 'btn btn--filled', type: 'button' }, ct('cl.cal.apply'));
-  const clearBtn = el('button', { class: 'btn btn--text', type: 'button' }, ct('cl.cal.clear'));
-  const closeBtn = el('button', { class: 'btn btn--text', type: 'button' }, i18n.t('common.close'));
+  const applyBtn = elt('button', { class: 'btn btn--filled', type: 'button' }, ct('cl.cal.apply'));
+  const clearBtn = elt('button', { class: 'btn btn--text', type: 'button' }, ct('cl.cal.clear'));
+  const closeBtn = elt('button', { class: 'btn btn--text', type: 'button' }, i18n.t('common.close'));
   actions.append(clearBtn, closeBtn, applyBtn);
   pop.append(actions);
 
@@ -1151,7 +1168,7 @@ function openCalendar(trigger) {
   function paintGrid() {
     clear(grid);
     const dows = zh ? DOW_ZH : DOW_EN;
-    for (const name of dows) grid.append(el('span', { class: 'ccr-cal-dow', attrs: { 'aria-hidden': 'true' } }, name));
+    for (const name of dows) grid.append(elt('span', { class: 'ccr-cal-dow', attrs: { 'aria-hidden': 'true' } }, name));
     const first = new Date(viewYear, viewMonth, 1);
     const startOffset = first.getDay();
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -1165,7 +1182,7 @@ function openCalendar(trigger) {
         continue;
       }
       const iso = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(cell).padStart(2, '0')}`;
-      const btn = el('button', {
+      const btn = elt('button', {
         class: 'ccr-cal-day',
         type: 'button',
         attrs: { 'aria-label': fmtHuman(new Date(viewYear, viewMonth, cell)), 'aria-pressed': 'false' },
@@ -1344,7 +1361,7 @@ function exportChangelog(fmt) {
 
 function mountDownload(slot) {
   clear(slot);
-  const checking = el('div', { class: 'ccr-empty', attrs: { role: 'status' } }, ct('dl.checking'));
+  const checking = elt('div', { class: 'ccr-empty', attrs: { role: 'status' } }, ct('dl.checking'));
   slot.append(checking);
 
   fetch(siteUrl('release-manifest.json'), { cache: 'no-store' })
@@ -1378,11 +1395,11 @@ function ctTemplateParts(key) {
 function paintDownloadAbsent(slot, { error } = {}) {
   clear(slot);
   const card = el('div', { class: 'ccr-dl-card', attrs: { role: 'status' } });
-  const title = el('h3', { class: 'title-large' }, error ? ct('dl.error.title') : ct('dl.absent.title'));
+  const title = elt('h3', { class: 'title-large' }, error ? ct('dl.error.title') : ct('dl.absent.title'));
   card.append(title);
 
   if (error) {
-    const body = el('p', { class: 'body-medium' }, ct('dl.error.body', { err: error }));
+    const body = elt('p', { class: 'body-medium' }, ct('dl.error.body', { err: error }));
     card.append(body);
   } else {
     // Absent state: facts exact — what is checked, when a button may appear,
@@ -1391,17 +1408,17 @@ function paintDownloadAbsent(slot, { error } = {}) {
     const body = el('p', { class: 'body-medium' });
     body.append(document.createTextNode(parts[0] || ''));
     if (parts.length > 1) {
-      body.append(el('code', {}, 'release-manifest.json'));
+      body.append(elt('code', {}, 'release-manifest.json'));
       body.append(document.createTextNode(parts.slice(1).join('{path}')));
     }
     card.append(body);
     const pathLine = el('p', { class: 'body-small' });
     pathLine.append(document.createTextNode('Manifest URL: '));
-    pathLine.append(el('code', {}, siteUrl('release-manifest.json')));
+    pathLine.append(elt('code', {}, siteUrl('release-manifest.json')));
     card.append(pathLine);
   }
 
-  const retry = el('button', { class: 'btn btn--tonal', type: 'button' }, ct('dl.retry'));
+  const retry = elt('button', { class: 'btn btn--tonal', type: 'button' }, ct('dl.retry'));
   retry.addEventListener('click', () => mountDownload(slot));
   card.append(retry);
   slot.append(card);
@@ -1413,14 +1430,14 @@ function paintDownloadResult(slot, manifest) {
     return;
   }
   clear(slot);
-  const title = el('h3', { class: 'title-large' }, ct('dl.present.title'));
+  const title = elt('h3', { class: 'title-large' }, ct('dl.present.title'));
   slot.append(title);
   for (const rel of manifest.releases) {
     const card = el('div', { class: 'ccr-dl-card ccr-dl-release' });
-    card.append(el('strong', {}, rel.version));
-    if (rel.date) card.append(el('span', { class: 'ccr-cl-date' }, rel.date));
+    card.append(elt('strong', {}, rel.version));
+    if (rel.date) card.append(elt('span', { class: 'ccr-cl-date' }, rel.date));
     const assets = Array.isArray(rel.assets) ? rel.assets : [];
-    card.append(el('span', { class: 'body-small' }, ct('dl.assets', { n: assets.length })));
+    card.append(elt('span', { class: 'body-small' }, ct('dl.assets', { n: assets.length })));
     for (const asset of assets) {
       const a = document.createElement('a');
       a.className = 'btn btn--filled';
