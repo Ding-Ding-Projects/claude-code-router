@@ -1,67 +1,84 @@
-# Handoff — release docs set
+# Handoff
 
-Handoff for the documentation lane of the current release train. Written 2026-08-22
-from the `docs/release-docs` worktree.
+Current state of this repository for whoever picks it up next. Written 2026-08-22,
+superseding the earlier per-lane handoff (that one described mid-flight state; every
+claim in it was re-checked against the repository before this rewrite).
 
-## Scope of this lane
+## Where things stand
 
-Documentation only. No source changes:
+- Default branch: `main` @ `6020e9b`, pushed and verified on
+  `Ding-Ding-Projects/claude-code-router` (public). Upstream remains configured as
+  the `upstream` remote and was never written to.
+- The release train merged: Material Design 3 UI rewrite, `ultracode`
+  reasoning-effort tier end-to-end, organization banner, desktop shell chrome,
+  default claude-design + claude-ship plugins, universal upstream auto-retry
+  (15 s cooldown, unlimited attempts, SSE waiting stream), Squirrel release
+  pipeline, line counter with agent-vs-human attribution, docs set.
+- A GitHub Pages site (landing + docs + changelog + visitor settings) is being
+  built on six local branches by a parallel build fleet; see "In flight".
 
-- `README.md` — new **Features** section covering the three landing features plus a docs index.
-- `docs/features/material-design-3-ui.md` — Material Design 3 management UI article.
-- `docs/features/reasoning-effort-ultracode.md` — ultracode reasoning effort article.
-- `docs/features/organization-banner.md` — organization banner article.
-- `ROADMAP.md`, `CHANGELOG.md`, `HANDOFF.md` — created (none existed before).
+## Verification evidence (what actually ran)
 
-This branch touches no files under `packages/**` or `.github/**`.
-
-## Branches in flight
-
-**Status note (2026-08-22): every branch listed here is a local working branch
-owned by a parallel lane of this release train. None of them exists on GitHub
-yet — there is nothing to fetch or open a PR against.** "In progress" below
-means review inside the owning lane, not an open pull request. Update this
-table as each branch is actually pushed and merged.
-
-| Branch | Lane | State |
+| Gate | Command | Result |
 | --- | --- | --- |
-| `feat/m3-tokens` | M3 token system under `packages/ui/src/styles/m3` | pending — parallel fleet, local only, not yet pushed |
-| `feat/m3-home-app` | Home surface conversion to M3 tokens | pending — parallel fleet, local only, not yet pushed |
-| `feat/m3-tray-browser` | Tray and browser surface conversion | pending — parallel fleet, local only, not yet pushed |
-| `feat/ultracode-effort-core` | `ultracode` tier in gateway catalog + request transform | pending — parallel fleet, local only, not yet pushed |
-| `feat/ultracode-effort-ui` | `ultracode` in desktop + management UI pickers (en/zh-Hant) | pending — parallel fleet, local only, not yet pushed |
-| `feat/org-banner` | Organization banner config, settings inputs, home strip | pending — parallel fleet, local only, not yet pushed |
-| `docs/release-docs` | This lane: README features section, feature articles, roadmap/changelog/handoff | this lane — local only, ready for review |
+| Type check | `npm run typecheck` | exit 0 |
+| UI suite | `npm test -w @claude-code-router/ui` | 187 pass / 0 fail |
+| Bundle build | `npm run build:assets` | exit 0 |
+| Core focused | compiled `default-plugins`, `upstream-waiting-retry`, `claude-app-gateway-models` under `.test-dist/` via `node --test` | 45 pass / 0 fail |
+| Line counter | `node scripts/count-lines.mjs` | exit 0 |
 
-## Verification state
+All gates ran against the integrated tree at `6020e9b`, i.e. against the source
+tree plus its built bundle — none of them drove the packaged installer. The
+desktop-shell lane additionally ran its own electron unit suite (41/41) and the
+effort-UI lane proved one negative regression red→green before landing.
 
-**Honest status: implementation is in review and NOT yet verified.**
+## Known open items (each needs an owner)
 
-- No feature branch above has been verified against a built artifact in this lane.
-- Each feature article carries a prominent "Status: implementation in review" banner and
-  a Verification section describing the planned checks; none of those checks have run.
-- The roadmap deliberately keeps all three features unticked with a *landing via review*
-  note; the changelog lists them under Unreleased with the same caveat.
-- What this lane did verify: every cross-link between the new documents resolves to a
-  file that exists in this branch (`README.md` ↔ the three `docs/features/*.md`
-  articles), and the markdown was reviewed by eye for heading structure, table shape,
-  and link syntax.
+1. **CI billing blocker** — the first workflow run on this repo failed at startup:
+   GitHub-hosted runners were refused because of account payments / spending limit.
+   This is account-level; every push stays red until billing is resolved. The
+   workflow files themselves parse clean and gate on nothing by design.
+2. **No release exists yet** — releases publish automatically per push once the
+   billing blocker clears. Until then README's "landing in this release train"
+   banner stays up, the download button on the future site stays absent, and
+   roadmap items stay unticked.
+3. **Visual captures pending** — real built-app screenshots (light/dark home,
+   settings, tray) and the root `social-preview.png` are being produced by the
+   site fleet's capture lane. Nothing visual should be claimed until those land.
+4. **UI language coverage** — the management UI i18n is `en` + `zh` only today;
+   there is no zh-Hant or bilingual mode in the app itself (the ultracode label
+   ships as en + zh accordingly). Closing that gap is a cross-cutting change.
+5. **~65 bespoke-styled buttons** intentionally left un-swapped during the home
+   reskin (unlayered `.md-btn` rules would silently override their utility
+   classes); they render through bridged tokens instead. Swap them only together
+   with a specificity fix.
+6. **Tidbyt/status surfaces** live outside this repository and are unaffected by
+   anything here.
+
+## In flight (do not delete while active)
+
+Six local branches owned by the site-build fleet, each with an active checkout:
+`feat/site-core`, `feat/social-captures`, `feat/pages-pipeline`,
+`feat/site-content`, `feat/site-toys-security`, `feat/site-toys-ops`. When they
+land: merge to `main`, run the full gate battery again, enable Pages with
+`build_type=workflow` (see `scripts/PAGES-ENABLE.md`), verify the deployed site
+serves absolute OG tags under `/claude-code-router/`.
+
+Retained deliberately after ancestry checks (not ancestors of `main`, content
+superseded): `preserve/docs-wip`, `preserve/release-pipeline-wip`,
+`review/correctness-regression`, `review/fleet3`, `review/md3-a11y-i18n`,
+`review/second-fleet`. Delete only with fresh authorization after re-proving.
 
 ## Next steps for whoever picks this up
 
-1. When the feature branches merge, run each article's planned verification against the
-   real build:
-   - M3 UI: capture home/tray/browser in light and dark, confirm `data-md-theme` +
-     `localStorage` persistence across restart.
-   - Ultracode: confirm catalog exposure on capable models only, transform output
-     (named pass-through vs. maximum numeric budget), picker labels en + zh-Hant,
-     fallback to default effort when a model lacks the tier.
-   - Banner: persistence round trip, 200/500-char and https validation rejections,
-     strip present when enabled and absent from the DOM when disabled, image-load
-     fallback to text-only.
-2. Tick the three roadmap items and move the changelog entries into a version heading
-   once verified — not before.
-3. Promote `docs/features/*.md` into the Astro content collection under
-   `docs/src/content/docs/en/...` so the articles render at ccrdesk.top, then mirror
-   them into the zh-Hant set.
-4. Keep this file current as branches merge or lanes change owner.
+1. Clear the Actions billing blocker, then watch the first release run end to end
+   and confirm the Squirrel artifacts + dim-sum code name land in the notes.
+2. Land the site fleet, enable Pages, verify deployed URL + OG fetch anonymously.
+3. Run each feature article's planned verification against a real installed build
+   (theme persistence across restart, catalog-gated ultracode visibility, banner
+   round-trip + validation rejections), then tick the three roadmap items and move
+   changelog entries into a version heading — not before.
+4. Promote `docs/features/*.md` into the Astro collection under
+   `docs/src/content/docs/en/...` so the articles render on the existing docs
+   site, then mirror into the zh-Hant set.
+5. Close the en/zh-only i18n gap (add zh-Hant + bilingual mode app-wide).
