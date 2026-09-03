@@ -20,6 +20,25 @@ export type AppDataExportResult = {
   file?: string;
 };
 
+export type ClaudeDesignMigrationExportResult = {
+  canceled: boolean;
+  file?: string;
+  manifest?: {
+    schemaVersion: "claude-design-desktop-import-v1";
+    sourceProductVersion: string;
+    sourceCommit: string;
+    sourceDatabaseSha256: string;
+    exportTimestamp: string;
+    idempotencyKey: string;
+    recordCounts: Record<string, number>;
+    files: Array<{ archivePath: string; bytes: number; sha256: string }>;
+  };
+};
+
+export type ClaudeDesignMigrationStatus = {
+  available: boolean;
+};
+
 export type AppCaptureElementPngRequest = {
   borderRadius?: number;
   exportId?: string;

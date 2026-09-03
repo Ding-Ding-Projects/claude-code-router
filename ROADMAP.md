@@ -9,6 +9,12 @@ is not a shipped one.
 
 ## Current release train
 
+- [ ] **Claude Design one-release migration bridge** *(implemented on `codex/claude-design-handoff`; awaiting integration and built-artifact verification)*
+  - Read-only `claude-design-desktop-import-v1` ZIP export with provenance, record counts, per-file SHA-256 values, deterministic idempotency key, and strict sensitive-data exclusions.
+  - Explicit Extensions UI export card for legacy profile or plugin data users, with no automatic disable, deletion, or uninstall.
+  - Focused migration tests cover selected records, archive contents, provenance, and traversal rejection.
+  - Docs: [docs/features/claude-design-migration.md](docs/features/claude-design-migration.md)
+
 - [ ] **Material Design 3 rewrite of the management UI** *(landing via review — `feat/m3-tokens`, `feat/m3-home-app`, `feat/m3-tray-browser`)*
   - Token system under `packages/ui/src/styles/m3`: color roles light + dark via `--md-sys-*` custom properties, type scale, shape, elevation, motion.
   - `ThemeProvider` applying `data-md-theme` with `localStorage` persistence (light / dark / system).

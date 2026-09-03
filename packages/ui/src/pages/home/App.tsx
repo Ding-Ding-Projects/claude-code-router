@@ -176,6 +176,7 @@ function App() {
   const [appInfo, setAppInfo] = useState<AppInfo>(fallbackInfo);
   const [draftConfig, setDraftConfig] = useState<AppConfig>(fallbackConfig);
   const [configLoaded, setConfigLoaded] = useState(() => !window.ccr);
+  const [claudeDesignMigrationAvailable, setClaudeDesignMigrationAvailable] = useState(false);
   const [onboardingStatusLoaded, setOnboardingStatusLoaded] = useState(() => !window.ccr);
   const [providerPresetsLoaded, setProviderPresetsLoaded] = useState(() => !window.ccr);
   const [gatewayStatus, setGatewayStatus] = useState<GatewayStatus>(fallbackGatewayStatus);
@@ -383,6 +384,24 @@ function App() {
       unsubscribeOpenUpdate();
     };
   }, []);
+
+  useEffect(() => {
+    if (!configLoaded || !window.ccr?.getClaudeDesignMigrationStatus) {
+      setClaudeDesignMigrationAvailable(false);
+      return;
+    }
+    let active = true;
+    void window.ccr.getClaudeDesignMigrationStatus()
+      .then((status) => {
+        if (active) setClaudeDesignMigrationAvailable(status.available);
+      })
+      .catch(() => {
+        if (active) setClaudeDesignMigrationAvailable(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [configLoaded, draftConfig.plugins, draftConfig.profile]);
 
   useEffect(() => {
     if (!appInfo.chatgptAppPath && !appInfo.opencodeAppPath && !appInfo.workbuddyAppPath) {
@@ -2154,6 +2173,22 @@ function App() {
     }
   }
 
+  async function exportClaudeDesignMigration() {
+    if (!window.ccr?.exportClaudeDesignMigration) {
+      setActionError(t("Migration export is available in the Electron app."));
+      return;
+    }
+    try {
+      const result = await window.ccr.exportClaudeDesignMigration();
+      if (!result.canceled && result.file) {
+        showToast(`${t("Migration archive exported")}: ${result.file}`);
+      }
+      setActionError("");
+    } catch (error) {
+      setActionError(formatError(error));
+    }
+  }
+
   function removeExtension(source: ExtensionSource, index: number, groupIndexes?: number[]) {
     const indexes = new Set(extensionActionIndexes(index, groupIndexes));
     updateConfig((config) => {
@@ -3127,6 +3162,8 @@ function App() {
                 extensions: {
                   configureExtension: openConfigureExtension,
                   config: draftConfig,
+                  exportClaudeDesignMigration: () => void exportClaudeDesignMigration(),
+                  legacyMigrationAvailable: claudeDesignMigrationAvailable,
                   installExtension: openInstallExtensionDialog,
                   openExtensionApp: (index, appId) => void openExtensionApp(index, appId),
                   removeExtension: (source, index, groupIndexes) => setExtensionDeleteTarget({ groupIndexes: extensionActionIndexes(index, groupIndexes), index, source }),

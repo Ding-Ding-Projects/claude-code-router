@@ -53,8 +53,12 @@ import { appUpdateService } from "./update-service";
 import { getUsageStats } from "@ccr/core/usage/store";
 import { applyNativeThemePreference } from "./native-theme";
 import { registerProviderAccountWebContentFetchHandler } from "./provider-account-webcontent";
+import {
+  CLAUDE_DESIGN_PLUGIN_DB_FILE,
+  exportClaudeDesignMigration
+} from "./claude-design-migration";
 import windowsManager from "./windows";
-import { CLAUDE_DESIGN_PLUGIN_ID, GATEWAY_PLUGIN_PERMISSION_IDS, GATEWAY_PLUGIN_SURFACE_IDS, type AgentAnalysisFilter, type AgentAnalysisTracePayloadRequest, type ApiKeyConfig, type AppCaptureElementPngRequest, type AppCaptureElementPngResult, type AppConfig, type AppDataExportResult, type AppImageExportTargetRequest, type AppImageExportTargetResult, type AppInfo, type AppRenderHtmlPngRequest, type AppRenderHtmlPngResult, type AppSaveConfigOptions, type BotGatewayQrLoginCancelRequest, type BotGatewayQrLoginStartRequest, type BotGatewayQrLoginWaitRequest, type BotGatewayQrWindowCloseRequest, type BotGatewayQrWindowOpenRequest, type ChromeLoginImportRequest, type GatewayPluginAppConfig, type GatewayPluginPermission, type GatewayPluginSurface, type GatewayProviderConnectivityCheckRequest, type GatewayProviderProbeCandidatesRequest, type GatewayProviderProbeRequest, type GatewayStatus, type LocalAgentProviderImportRequest, type PluginDependency, type PluginDirectorySelection, type ProfileApplyResult, type ProfileOpenRequest, type ProfileOpenResult, type ProviderAccountResetRequest, type ProviderAccountSnapshotRequestOptions, type ProviderAccountTestRequest, type ProviderCatalogModelsRequest, type ProviderIconDetectionRequest, type ProviderManifestFetchRequest, type RequestLogListFilter, type RouteScriptTestRequest, type RouteScriptValidationRequest, type UsageStatsFilter, type UsageStatsRange } from "@ccr/core/contracts/app";
+import { CLAUDE_DESIGN_PLUGIN_ID, GATEWAY_PLUGIN_PERMISSION_IDS, GATEWAY_PLUGIN_SURFACE_IDS, type AgentAnalysisFilter, type AgentAnalysisTracePayloadRequest, type ApiKeyConfig, type AppCaptureElementPngRequest, type AppCaptureElementPngResult, type AppConfig, type AppDataExportResult, type AppImageExportTargetRequest, type AppImageExportTargetResult, type AppInfo, type AppRenderHtmlPngRequest, type AppRenderHtmlPngResult, type AppSaveConfigOptions, type BotGatewayQrLoginCancelRequest, type BotGatewayQrLoginStartRequest, type BotGatewayQrLoginWaitRequest, type BotGatewayQrWindowCloseRequest, type BotGatewayQrWindowOpenRequest, type ClaudeDesignMigrationExportResult, type ChromeLoginImportRequest, type GatewayPluginAppConfig, type GatewayPluginPermission, type GatewayPluginSurface, type GatewayProviderConnectivityCheckRequest, type GatewayProviderProbeCandidatesRequest, type GatewayProviderProbeRequest, type GatewayStatus, type LocalAgentProviderImportRequest, type PluginDependency, type PluginDirectorySelection, type ProfileApplyResult, type ProfileOpenRequest, type ProfileOpenResult, type ProviderAccountResetRequest, type ProviderAccountSnapshotRequestOptions, type ProviderAccountTestRequest, type ProviderCatalogModelsRequest, type ProviderIconDetectionRequest, type ProviderManifestFetchRequest, type RequestLogListFilter, type RouteScriptTestRequest, type RouteScriptValidationRequest, type UsageStatsFilter, type UsageStatsRange } from "@ccr/core/contracts/app";
 const imageExportTargets = new Map<string, string>();
 const gatewayPluginPermissionIdSet = new Set<string>(GATEWAY_PLUGIN_PERMISSION_IDS);
 const gatewayPluginSurfaceIdSet = new Set<string>(GATEWAY_PLUGIN_SURFACE_IDS);
@@ -89,6 +93,35 @@ ipcMain.handle(IPC_CHANNELS.appGetInfo, () => {
 
 ipcMain.handle(IPC_CHANNELS.appExportData, async (event): Promise<AppDataExportResult> => {
   return exportAppData(BrowserWindow.fromWebContents(event.sender));
+});
+ipcMain.handle(IPC_CHANNELS.appExportClaudeDesignMigration, async (event): Promise<ClaudeDesignMigrationExportResult> => {
+  const config = await loadAppConfig();
+  const hasLegacyProfile = config.profile?.profiles?.some((profile) =>
+    profile.agent === CLAUDE_DESIGN_PLUGIN_ID && profile.enabled !== false
+  ) ?? false;
+  if (!hasLegacyProfile && !existsSync(CLAUDE_DESIGN_PLUGIN_DB_FILE)) {
+    throw new Error("No legacy Claude Design profile or local project data was found.");
+  }
+
+  const result = BrowserWindow.fromWebContents(event.sender)
+    ? await dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender)!, claudeDesignMigrationSaveDialogOptions())
+    : await dialog.showSaveDialog(claudeDesignMigrationSaveDialogOptions());
+  if (result.canceled || !result.filePath) {
+    return { canceled: true };
+  }
+
+  const exported = exportClaudeDesignMigration(result.filePath, {}, {
+    sourceProductVersion: app.getVersion(),
+    sourceCommit: process.env.CCR_SOURCE_COMMIT || undefined
+  });
+  return exported;
+});
+ipcMain.handle(IPC_CHANNELS.appGetClaudeDesignMigrationStatus, async (): Promise<{ available: boolean }> => {
+  const config = await loadAppConfig();
+  const hasLegacyProfile = config.profile?.profiles?.some((profile) =>
+    profile.agent === CLAUDE_DESIGN_PLUGIN_ID && profile.enabled !== false
+  ) ?? false;
+  return { available: hasLegacyProfile || existsSync(CLAUDE_DESIGN_PLUGIN_DB_FILE) };
 });
 ipcMain.handle(IPC_CHANNELS.appCaptureElementPng, async (event, request: AppCaptureElementPngRequest): Promise<AppCaptureElementPngResult> => {
   return captureElementPng(BrowserWindow.fromWebContents(event.sender), request);
@@ -588,6 +621,17 @@ function dataExportSaveDialogOptions(exportedAt: string): SaveDialogOptions {
       { extensions: ["json"], name: "CCR data export" }
     ],
     title: "Export CCR data"
+  };
+}
+
+function claudeDesignMigrationSaveDialogOptions(): SaveDialogOptions {
+  return {
+    buttonLabel: "Export migration archive",
+    defaultPath: path.join(app.getPath("downloads"), "claude-design-desktop-import-v1.zip"),
+    filters: [
+      { extensions: ["zip"], name: "Claude Design Desktop migration archive" }
+    ],
+    title: "Export Claude Design migration archive"
   };
 }
 

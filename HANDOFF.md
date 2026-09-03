@@ -6,6 +6,15 @@ claim in it was re-checked against the repository before this rewrite).
 
 ## Where things stand
 
+### Claude Design migration bridge
+
+- `codex/claude-design-handoff` adds `packages/electron/src/main/claude-design-migration.ts`, a read-only exporter for `claude-design-desktop-import-v1`.
+- The exporter includes selected project records, templates, design systems, files, conversations, comments, and thumbnails. It writes a manifest with source version and commit, source database SHA-256, counts, per-file hashes, export time, and a deterministic idempotency key.
+- Exclusions are explicit and enforced: request logs, headers, bodies, responses, hosted caches, proxy responses, browser state, gateway configuration and keys, OAuth data, mock identity, entitlements, telemetry, and analytics are not exported.
+- `packages/electron/src/main/ipc.ts` adds a native save-dialog action, and the Extensions view shows a non-blocking export card for the legacy Claude Design plugin. The action never disables, removes, or uninstalls the plugin.
+- The exporter uses unique temporary files, bounded rename retry for transient Windows sharing errors, relative archive paths, traversal rejection, per-file and total size limits, and duplicate-entry checks.
+- The new focused tests pass when run under Node after rebuilding `better-sqlite3` for the Node ABI. The Electron test harness currently needs its native binding rebuilt for Electron 42.3.3 before the full Electron suite can execute.
+
 - Default branch: `main` @ `6020e9b`, pushed and verified on
   `Ding-Ding-Projects/claude-code-router` (public). Upstream remains configured as
   the `upstream` remote and was never written to.
