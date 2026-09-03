@@ -32,6 +32,17 @@ export type ClaudeDesignMigrationCounts = {
   conversations: number;
   comments: number;
   thumbnails: number;
+  replies: number;
+  timestamps: number;
+  metadata: number;
+};
+
+export type ClaudeDesignMigrationProject = {
+  id: string;
+  name: string;
+  ownerKey: string | null;
+  type: "project" | "template";
+  fileCount: number;
 };
 
 export type ClaudeDesignMigrationPreflight = {
@@ -40,23 +51,24 @@ export type ClaudeDesignMigrationPreflight = {
   sourceDbSha256?: string;
   counts: ClaudeDesignMigrationCounts;
   selectedProjectIds: string[];
+  projects: ClaudeDesignMigrationProject[];
   idempotencyKey?: string;
   exclusions: Record<string, string>;
   issues: string[];
+  exclusionCounts: Record<string, number>;
 };
 
 export type ClaudeDesignMigrationManifest = {
-  schemaVersion: typeof CLAUDE_DESIGN_MIGRATION_SCHEMA;
+  format: typeof CLAUDE_DESIGN_MIGRATION_SCHEMA;
+  schemaVersion: 1;
   sourceProductVersion: string;
   sourceCommit: string;
   sourceDatabaseSha256: string;
-  exportTimestamp: string;
+  exportedAt: string;
   idempotencyKey: string;
-  selection: ClaudeDesignMigrationSelection;
-  recordCounts: ClaudeDesignMigrationCounts;
+  recordCounts: Record<string, number>;
   exclusionCounts: Record<string, number>;
-  excluded: Record<string, string>;
-  files: Array<{ archivePath: string; bytes: number; sha256: string }>;
+  fileHashes: Record<string, string>;
 };
 
 export type ClaudeDesignMigrationExportResult = {
@@ -64,6 +76,24 @@ export type ClaudeDesignMigrationExportResult = {
   file?: string;
   manifest?: ClaudeDesignMigrationManifest;
 };
+
+export function validateClaudeDesignMigrationSelection(value: unknown): ClaudeDesignMigrationSelection {
+  if (value === undefined) return {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Migration selection must be an object.");
+  const record = value as Record<string, unknown>;
+  const allowed = new Set(["projectIds", "includeTemplates", "includeDesignSystems", "includeConversations", "includeComments", "includeThumbnails"]);
+  for (const key of Object.keys(record)) if (!allowed.has(key)) throw new Error(`Unknown migration selection field: ${key}.`);
+  const result: ClaudeDesignMigrationSelection = {};
+  if (record.projectIds !== undefined) {
+    if (!Array.isArray(record.projectIds) || record.projectIds.some((id) => typeof id !== "string" || !/^[A-Za-z0-9._-]{1,160}$/.test(id.trim()))) throw new Error("Migration projectIds must contain safe project identifiers.");
+    result.projectIds = [...new Set(record.projectIds.map((id) => (id as string).trim()))];
+  }
+  for (const key of ["includeTemplates", "includeDesignSystems", "includeConversations", "includeComments", "includeThumbnails"] as const) {
+    if (record[key] !== undefined && typeof record[key] !== "boolean") throw new Error(`Migration selection field ${key} must be boolean.`);
+    if (record[key] !== undefined) result[key] = record[key] as boolean;
+  }
+  return result;
+}
 
 type DesignItemRow = {
   collection: string;
@@ -95,6 +125,15 @@ const EXCLUDED = {
   telemetry: "Telemetry and analytics data are never migrated."
 } as const;
 
+const EMPTY_EXCLUSION_COUNTS = {
+  requestLogs: 0,
+  cachedHostedAssets: 0,
+  browserState: 0,
+  gatewayConfiguration: 0,
+  oauthData: 0,
+  telemetry: 0
+};
+
 export function defaultClaudeDesignMigrationDbFile(): string {
   return CLAUDE_DESIGN_PLUGIN_DB_FILE;
 }
@@ -110,6 +149,8 @@ export function inspectClaudeDesignMigration(
       counts: emptyCounts(),
       exclusions: { ...EXCLUDED },
       issues: [`Legacy Claude Design database was not found at ${sourceDbFile}.`],
+      exclusionCounts: { ...EMPTY_EXCLUSION_COUNTS },
+      projects: [],
       selectedProjectIds: normalizeProjectIds(selection.projectIds),
       sourceDbFile
     };
@@ -126,6 +167,8 @@ export function inspectClaudeDesignMigration(
       exclusions: { ...EXCLUDED },
       idempotencyKey: createIdempotencyKey(sourceDbSha256, selection),
       issues: [],
+      exclusionCounts: snapshot.exclusionCounts,
+      projects: snapshot.projectSummaries,
       selectedProjectIds: snapshot.projectIds,
       sourceDbFile,
       sourceDbSha256
@@ -136,6 +179,8 @@ export function inspectClaudeDesignMigration(
       counts: emptyCounts(),
       exclusions: { ...EXCLUDED },
       issues: [`Legacy Claude Design database could not be inspected: ${formatError(error)}`],
+      exclusionCounts: { ...EMPTY_EXCLUSION_COUNTS },
+      projects: [],
       selectedProjectIds: normalizeProjectIds(selection.projectIds),
       sourceDbFile
     };
@@ -158,7 +203,7 @@ export function exportClaudeDesignMigration(
   const sourceDbSha256 = sha256(sourceBytes);
   const normalizedSelection = normalizeSelection(selection);
   const idempotencyKey = createIdempotencyKey(sourceDbSha256, normalizedSelection);
-  const exportTimestamp = options.exportTimestamp || new Date().toISOString();
+  const exportedAt = options.exportTimestamp || new Date().toISOString();
   const sourceProductVersion = options.sourceProductVersion || "unknown";
   const sourceCommit = options.sourceCommit || CLAUDE_DESIGN_SOURCE_COMMIT;
 
@@ -167,36 +212,40 @@ export function exportClaudeDesignMigration(
     database = createBetterSqliteDatabase(sourceDbFile, { fileMustExist: true, readonly: true });
     const snapshot = readSnapshot(database, normalizedSelection);
     const entries: ZipEntry[] = [];
-    const exportedFiles: ClaudeDesignMigrationManifest["files"] = [];
-    const addJson = (archivePath: string, value: unknown): void => addEntry(entries, exportedFiles, archivePath, Buffer.from(`${JSON.stringify(value, null, 2)}\n`, "utf8"));
+    const fileHashes: Record<string, string> = {};
+    const addJson = (archivePath: string, value: unknown): void => addEntry(entries, fileHashes, archivePath, Buffer.from(`${JSON.stringify(value, null, 2)}\n`, "utf8"));
 
     for (const row of snapshot.projects) {
       const item = safeItem(row, normalizedSelection.includeConversations);
-      addJson(`${projectType(row) === 2 ? "records/templates" : "records/projects"}/${row.uuid}.json`, item);
+      const recordPath = projectType(row) === 2
+        ? `templates/${encodePathSegment(row.uuid)}/template.json`
+        : `projects/${encodePathSegment(row.uuid)}/project.json`;
+      addJson(recordPath, item);
+      addJson(`projects/${encodePathSegment(row.uuid)}/metadata/timestamps.json`, { createdAt: row.created_at, updatedAt: row.updated_at });
     }
     if (normalizedSelection.includeDesignSystems) {
-      for (const row of snapshot.designSystems) addJson(`records/design-systems/${row.uuid}.json`, safeItem(row, false));
+      for (const row of snapshot.designSystems) addJson(`design-systems/${encodePathSegment(row.uuid)}/design-system.json`, safeItem(row, false));
     }
     if (normalizedSelection.includeComments) {
-      for (const row of snapshot.comments) addJson(`records/comments/${row.uuid}.json`, safeItem(row, false));
+      for (const row of snapshot.comments) {
+        const comment = safeItem(row, false);
+        addJson(`projects/${encodePathSegment(itemProjectId(row))}/comments/${encodePathSegment(row.uuid)}.json`, comment);
+        const replies = Array.isArray(parseJsonRecord(row.data_json).replies) ? parseJsonRecord(row.data_json).replies : [];
+        replies.forEach((reply, index) => addJson(`projects/${encodePathSegment(itemProjectId(row))}/comments/${encodePathSegment(row.uuid)}/replies/${index + 1}.json`, reply));
+      }
     }
     if (normalizedSelection.includeConversations) {
       for (const row of snapshot.projects) {
-        addJson(`records/conversations/${row.uuid}.json`, {
-          projectId: row.uuid,
-          createdAt: row.created_at,
-          updatedAt: row.updated_at,
-          messages: parseJsonArray(row.messages_json)
-        });
+        addJson(`projects/${encodePathSegment(row.uuid)}/conversations/default.json`, { projectId: row.uuid, createdAt: row.created_at, updatedAt: row.updated_at, messages: parseJsonArray(row.messages_json) });
       }
     }
     if (normalizedSelection.includeThumbnails) {
       for (const row of snapshot.thumbnails) {
         const body = decodeBase64(row.data.body_base64, `thumbnail ${row.uuid}`);
         const extension = extensionForContentType(row.data.content_type);
-        const archivePath = `thumbnails/${encodePathSegment(row.uuid)}${extension}`;
-        addEntry(entries, exportedFiles, archivePath, body);
-        addJson(`records/thumbnails/${row.uuid}.json`, {
+        const archivePath = `projects/${encodePathSegment(row.uuid)}/thumbnails/default${extension}`;
+        addEntry(entries, fileHashes, archivePath, body);
+        addJson(`projects/${encodePathSegment(row.uuid)}/metadata/thumbnail.json`, {
           projectId: row.uuid,
           contentType: row.data.content_type,
           archivePath
@@ -205,28 +254,25 @@ export function exportClaudeDesignMigration(
     }
     const fileRecords = snapshot.files.map((row) => {
       const body = decodeBase64(row.body_base64, `file ${row.project_id}/${row.path}`);
-      const archivePath = `files/${encodePathSegment(row.project_id)}/${encodePath(row.path)}`;
-      addEntry(entries, exportedFiles, archivePath, body);
-      return { ...row, body_base64: undefined, archivePath, sha256: sha256(body), bytes: body.length };
+      const archivePath = `projects/${encodePathSegment(row.project_id)}/files/${encodePath(row.path)}`;
+      addEntry(entries, fileHashes, archivePath, body);
+      return { path: row.path, contentType: row.content_type, version: row.version, createdAt: row.created_at, updatedAt: row.updated_at, archivePath, sha256: sha256(body), bytes: body.length };
     });
-    addEntry(entries, exportedFiles, "records/files.jsonl", Buffer.from(fileRecords.map((row) => JSON.stringify(row)).join("\n") + (fileRecords.length ? "\n" : ""), "utf8"));
-    addJson("records/selection.json", normalizedSelection);
+    addEntry(entries, fileHashes, "metadata/files.jsonl", Buffer.from(fileRecords.map((row) => JSON.stringify(row)).join("\n") + (fileRecords.length ? "\n" : ""), "utf8"));
 
     const manifest: ClaudeDesignMigrationManifest = {
-      schemaVersion: CLAUDE_DESIGN_MIGRATION_SCHEMA,
+      format: CLAUDE_DESIGN_MIGRATION_SCHEMA,
+      schemaVersion: 1,
       sourceProductVersion,
       sourceCommit,
       sourceDatabaseSha256: sourceDbSha256,
-      exportTimestamp,
+      exportedAt,
       idempotencyKey,
-      selection: normalizedSelection,
       recordCounts: snapshot.counts,
-      exclusionCounts: Object.fromEntries(Object.keys(EXCLUDED).map((key) => [key, 0])),
-      excluded: { ...EXCLUDED },
-      files: exportedFiles
+      exclusionCounts: snapshot.exclusionCounts,
+      fileHashes
     };
     addJson("manifest.json", manifest);
-    addJson("EXCLUSIONS.json", { schemaVersion: CLAUDE_DESIGN_MIGRATION_SCHEMA, excluded: EXCLUDED });
 
     if (entries.length > MAX_ARCHIVE_ENTRIES) throw new Error(`Migration archive has too many entries (${entries.length}).`);
     const archive = createZip(entries);
@@ -257,6 +303,20 @@ function readSnapshot(database: BetterSqliteDatabase, selection: ClaudeDesignMig
     const bytes = Buffer.byteLength(file.body_base64 || "", "base64");
     if (bytes > MAX_FILE_BYTES) throw new Error(`Migration file ${file.project_id}/${file.path} exceeds the ${MAX_FILE_BYTES} byte limit.`);
   }
+  const projectSummaries = projects.map((row) => {
+    const data = parseJsonRecord(row.data_json);
+    return {
+      id: row.uuid,
+      name: row.title,
+      ownerKey: typeof data.ownerKey === "string" ? data.ownerKey : typeof data.owner_key === "string" ? data.owner_key : null,
+      type: projectType(row) === 2 ? "template" as const : "project" as const,
+      fileCount: selectedFiles.filter((file) => file.project_id === row.uuid).length
+    };
+  });
+  const replies = comments.reduce((total, row) => {
+    const data = parseJsonRecord(row.data_json);
+    return total + (Array.isArray(data.replies) ? data.replies.length : 0);
+  }, 0);
   return {
     comments,
     counts: {
@@ -266,12 +326,17 @@ function readSnapshot(database: BetterSqliteDatabase, selection: ClaudeDesignMig
       files: selectedFiles.length,
       conversations: selection.includeConversations !== false ? projects.filter((row) => parseJsonArray(row.messages_json).length > 0).length : 0,
       comments: comments.length,
-      thumbnails: thumbnails.length
+      thumbnails: thumbnails.length,
+      replies,
+      timestamps: projects.length,
+      metadata: projects.length
     } satisfies ClaudeDesignMigrationCounts,
     designSystems,
     files: selectedFiles,
     projectIds,
     projects,
+    projectSummaries,
+    exclusionCounts: countExcluded(database),
     thumbnails
   };
 }
@@ -303,33 +368,43 @@ function projectType(row: DesignItemRow): number {
 }
 
 function safeItem(row: DesignItemRow, includeMessages: boolean | undefined): Record<string, unknown> {
+  const data = parseJsonRecord(row.data_json);
+  const ownerKey = typeof data.ownerKey === "string" ? data.ownerKey : typeof data.owner_key === "string" ? data.owner_key : null;
+  const members = Array.isArray(data.members) ? data.members.filter((member): member is string => typeof member === "string") : [];
   return {
-    collection: row.collection,
-    createdAt: row.created_at,
-    data: parseJsonRecord(row.data_json),
     id: row.uuid,
+    legacyId: row.uuid,
+    name: row.title,
+    ownerKey,
+    members,
+    description: typeof data.description === "string" ? data.description : "",
+    type: projectType(row),
+    data,
+    collection: row.collection,
     model: row.model,
-    messages: includeMessages ? parseJsonArray(row.messages_json) : [],
-    title: row.title,
-    updatedAt: row.updated_at
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    messages: includeMessages ? parseJsonArray(row.messages_json) : []
   };
 }
 
 function parseJsonRecord(value: string): Record<string, any> {
   try {
-    const parsed = JSON.parse(value || "{}");
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
-  } catch {
-    return {};
+    const parsed = JSON.parse(value);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("object expected");
+    return parsed as Record<string, any>;
+  } catch (error) {
+    throw new Error(`Invalid source JSON object: ${formatError(error)}`);
   }
 }
 
 function parseJsonArray(value: string): unknown[] {
   try {
-    const parsed = JSON.parse(value || "[]");
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) throw new Error("array expected");
+    return parsed;
+  } catch (error) {
+    throw new Error(`Invalid source JSON array: ${formatError(error)}`);
   }
 }
 
@@ -367,15 +442,30 @@ function sha256(value: Buffer): string {
 }
 
 function emptyCounts(): ClaudeDesignMigrationCounts {
-  return { comments: 0, conversations: 0, designSystems: 0, files: 0, projects: 0, templates: 0, thumbnails: 0 };
+  return { comments: 0, conversations: 0, designSystems: 0, files: 0, projects: 0, templates: 0, thumbnails: 0, replies: 0, timestamps: 0, metadata: 0 };
+}
+
+function countExcluded(database: BetterSqliteDatabase): Record<string, number> {
+  const count = (table: string): number => {
+    const present = database.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1").get(table);
+    if (!present) return 0;
+    const row = database.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get() as { count?: number | bigint };
+    return Number(row?.count || 0);
+  };
+  return {
+    ...EMPTY_EXCLUSION_COUNTS,
+    requestLogs: count("claude_design_requests"),
+    cachedHostedAssets: count("claude_design_assets") + count("claude_design_responses"),
+    telemetry: count("events")
+  };
 }
 
 type ZipEntry = { name: string; body: Buffer };
 
-function addEntry(entries: ZipEntry[], manifestFiles: ClaudeDesignMigrationManifest["files"], name: string, body: Buffer): void {
+function addEntry(entries: ZipEntry[], fileHashes: Record<string, string>, name: string, body: Buffer): void {
   if (entries.some((entry) => entry.name === name)) throw new Error(`Duplicate migration archive entry: ${name}`);
   entries.push({ name, body });
-  manifestFiles.push({ archivePath: name, bytes: body.length, sha256: sha256(body) });
+  fileHashes[name] = sha256(body);
 }
 
 function createZip(entries: ZipEntry[]): Buffer {
