@@ -69,12 +69,16 @@ function sha256File(file) {
   return createHash("sha256").update(readFileSync(file)).digest("hex");
 }
 
-/** Parses width/height out of a PNG buffer (IHDR big-endian at offset 16). */
-function pngDimensions(buffer) {
-  if (buffer.length < 24 || buffer.readUInt32BE(0) !== 0x89504e47 || buffer.readUInt32BE(4) !== 0x0d0a1a0a) {
-    throw new Error("not a PNG");
+/** Parses width/height out of a PNG buffer (IHDR big-endian at offset 16).
+ *  Uses DataView so any ArrayBufferView works, not only Buffer instances. */
+function pngDimensions(bytes) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const PNG_MAGIC_1 = 0x89504e47;
+  const PNG_MAGIC_2 = 0x0d0a1a0a;
+  if (bytes.byteLength < 24 || view.getUint32(0) !== PNG_MAGIC_1 || view.getUint32(4) !== PNG_MAGIC_2) {
+    throw new Error(`not a PNG (${bytes.constructor?.name ?? typeof bytes}, ${bytes.byteLength} bytes)`);
   }
-  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+  return { width: view.getUint32(16), height: view.getUint32(20) };
 }
 
 function assertNonBlank(buffer, label) {
@@ -255,7 +259,7 @@ class Cdp {
   }
 
   async screenshot() {
-    const { data } = await this.send("Page.captureScreenshot", { format: "png", optimizeForSpeed: false });
+    const { data } = await this.send("Page.captureScreenshot", { format: "png" });
     return Buffer.from(data, "base64");
   }
 
@@ -284,6 +288,21 @@ async function findHomeTarget(port) {
   return home[0];
 }
 
+/** Evaluate with one retry — an evaluate racing a page navigation can hang
+ *  until the CDP timeout, and a second attempt lands cleanly afterwards. */
+async function evalRetry(cdp, expression, attempts = 2) {
+  let lastError;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await cdp.eval(expression);
+    } catch (error) {
+      lastError = error;
+      await sleep(1200);
+    }
+  }
+  throw lastError;
+}
+
 /* ------------------------------------------------------------- main flow */
 
 async function main() {
@@ -293,6 +312,7 @@ async function main() {
   let child;
   let stderrTail = "";
   let cleanedUp = false;
+  let cdp = null;
 
   if (!attachMode) {
     electronExe = ensureElectronBinary();
@@ -301,6 +321,7 @@ async function main() {
     const dataDir = path.join(scratch, "appdata");
     mkdirSync(profileDir, { recursive: true });
     mkdirSync(dataDir, { recursive: true });
+    mkdirSync(path.join(scratch, "home"), { recursive: true });
   }
   mkdirSync(outAbs, { recursive: true });
 
@@ -321,7 +342,13 @@ async function main() {
     log(`launching built app on CDP port ${cdpPort} (throwaway profile ${profileDir})`);
     child = spawn(electronExe, args, {
       cwd: repoRoot,
-      env: { ...process.env, CCR_INTERNAL_APP_DATA_DIR: dataDir },
+      // Both redirects matter: appdata holds config/sqlite, home keeps any
+      // profile sync (Claude/Codex client configs) inside the sandbox too.
+      env: {
+        ...process.env,
+        CCR_INTERNAL_APP_DATA_DIR: dataDir,
+        CCR_INTERNAL_HOME_DIR: path.join(scratch, "home")
+      },
       stdio: ["ignore", "pipe", "pipe"]
     });
     child.stderr.on("data", (chunk) => {
@@ -338,7 +365,7 @@ async function main() {
     });
     log(`connected target: ${target.url}`);
 
-    const cdp = new Cdp(target.webSocketDebuggerUrl);
+    cdp = new Cdp(target.webSocketDebuggerUrl);
     await cdp.connect();
     await cdp.send("Page.enable");
 
@@ -347,20 +374,83 @@ async function main() {
       label: "renderer ready"
     });
 
+    /* If onboarding is showing, import a no-login public provider through the
+       real onboarding UI first, so the gateway reaches a healthy state and the
+       captures show the working interface rather than a fresh-profile error.
+       The provider list loads asynchronously (it scans local CLIs first), so
+       poll for the Import button instead of checking once. */
+    const importClick = await waitFor(
+      async () => {
+        if (await cdp.eval("document.querySelector('nav') !== null")) return "overview-already";
+        const state = await cdp.eval(
+          `(() => {
+             const buttons = [...document.querySelectorAll('button')];
+             const hasOpenCodeAncestor = (b) => {
+               for (let p = b.parentElement; p && p !== document.body; p = p.parentElement) {
+                 if ((p.textContent || '').includes('OpenCode')) return true;
+               }
+               return false;
+             };
+             const hit = buttons.find((b) => /import/i.test(b.textContent || '') && hasOpenCodeAncestor(b));
+             if (!hit) return 'not-yet';
+             hit.click();
+             return 'clicked';
+           })()`
+        );
+        return state === "not-yet" ? false : state;
+      },
+      { timeoutMs: 45_000, intervalMs: 1000, label: "onboarding import button" }
+    ).catch(() => "skipped");
+    if (importClick === "clicked") {
+      // Walk the remaining onboarding steps the way a real user would:
+      // press the primary action (Next step … Let's start) until the shell
+      // navigation appears, which marks onboarding genuinely completed.
+      // Clicks may trigger navigation, so tolerate hung evaluates here.
+      for (let i = 0; i < 14; i++) {
+        await sleep(2000);
+        let navVisible = false;
+        try {
+          navVisible = await cdp.eval("document.querySelector('nav') !== null");
+        } catch {
+          continue;
+        }
+        if (navVisible) break;
+        await evalRetry(cdp,
+          `(() => {
+             const norm = (b) => (b.textContent || '').replace(/['’]/g, '').trim().toLowerCase();
+             const buttons = [...document.querySelectorAll('button')].filter((b) => !b.disabled);
+             const hit = buttons.find((b) => /^(next step|next|continue|lets start|get started|finish|done)$/.test(norm(b)));
+             if (hit) hit.click();
+           })(); void 0`
+        ).catch(() => {});
+      }
+      log("onboarding steps walked");
+    } else {
+      log(`provider import step: ${importClick}`);
+    }
     /* Finish onboarding through the app's own bridge, then reload so the
        overview surface renders. Kick off async work, poll a sync flag. */
-    cdp.eval("window.ccr.setOnboardingFinished().then(() => { window.__capOnb = 'ok'; }).catch((e) => { window.__capOnb = 'err:' + e; }); void 0");
+    evalRetry(cdp, "window.ccr.setOnboardingFinished().then(() => { window.__capOnb = 'ok'; }).catch((e) => { window.__capOnb = 'err:' + e; }); void 0").catch(() => {});
     await waitFor(async () => (await cdp.eval("window.__capOnb")) === "ok", { timeoutMs: 30_000, label: "onboarding marked finished" });
-    cdp.eval("location.reload(); void 0");
+    evalRetry(cdp, "location.reload(); void 0").catch(() => {});
     await sleep(1500);
     await waitFor(async () => cdp.eval("!!window.ccr && document.querySelector('nav') !== null"), {
       timeoutMs: 60_000,
       label: "overview navigation rendered"
     });
+    // Prefer a healthy gateway for the captures; if it never settles, capture
+    // honestly as-is rather than faking state.
+    await waitFor(
+      async () => !(await cdp.eval("document.body.innerText.includes('Service failed to start')")),
+      { timeoutMs: 25_000, intervalMs: 1000, label: "healthy gateway state" }
+    ).catch(() => log("gateway error banner still present; capturing as-is"));
 
-    const save = (name, buffer) => {
+    const save = (name, bytes) => {
+      // Write first, then verify the exact bytes on disk decode as a real,
+      // non-blank PNG; a blank frame must fail loudly here.
       const file = path.join(outAbs, name);
-      writeFileSync(file, buffer);
+      writeFileSync(file, bytes);
+      assertNonBlank(bytes, name);
       return file;
     };
 
@@ -370,17 +460,17 @@ async function main() {
       label: "light theme applied"
     }).catch(() => log("theme attribute was not 'light'; capturing as-is"));
     await sleep(1200); // settle fonts/layout after first paint
-    assertNonBlank(save("home-light.png", await cdp.screenshot()), "home-light.png");
+    save("home-light.png", await cdp.screenshot());
 
     /* Home — dark via the app's own preference bridge. */
-    cdp.eval("window.ccr.setThemePreference('dark').then(() => { window.__capTheme = 'ok'; }).catch((e) => { window.__capTheme = 'err:' + e; }); void 0");
+    evalRetry(cdp, "window.ccr.setThemePreference('dark').then(() => { window.__capTheme = 'ok'; }).catch((e) => { window.__capTheme = 'err:' + e; }); void 0").catch(() => {});
     await waitFor(
       async () =>
         (await cdp.eval("document.documentElement.getAttribute('data-md-theme')")) === "dark",
       { timeoutMs: 20_000, label: "dark theme applied" }
     );
     await sleep(900);
-    assertNonBlank(save("home-dark.png", await cdp.screenshot()), "home-dark.png");
+    save("home-dark.png", await cdp.screenshot());
 
     /* Providers view via the real sidebar button click. */
     const providersClick = await cdp.eval(
@@ -402,7 +492,7 @@ async function main() {
       label: "providers view rendered"
     });
     await sleep(900);
-    assertNonBlank(save("providers-light.png", await cdp.screenshot()), "providers-light.png");
+    save("providers-light.png", await cdp.screenshot());
 
     /* Settings dialog via the sidebar footer settings button. */
     const settingsClick = await cdp.eval(
@@ -420,7 +510,7 @@ async function main() {
       label: "settings dialog opened"
     });
     await sleep(900);
-    assertNonBlank(save("settings-dialog-dark.png", await cdp.screenshot()), "settings-dialog-dark.png");
+    save("settings-dialog-dark.png", await cdp.screenshot());
 
     cdp.close();
     log("captures complete");
@@ -436,6 +526,7 @@ async function main() {
     if (stderrTail.trim()) console.error(`[capture-ui] app stderr tail:\n${stderrTail}`);
     throw error;
   } finally {
+    cdp?.close();
     if (!attachMode && !cleanedUp) {
       await cleanupApp(child, scratch);
     }
@@ -540,9 +631,10 @@ async function composeSocialPreview(homeDarkPath) {
 
 const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isDirectRun) {
-  main().catch((error) => {
+  main().catch(async (error) => {
     console.error(error);
-    process.exitCode = 1;
+    // Give the pipe a moment to flush before the hard exit.
+    setTimeout(() => process.exit(1), 1500).unref();
   });
 }
 
