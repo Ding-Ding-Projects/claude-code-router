@@ -31,6 +31,21 @@ export const SITE_TABS = [
 
 const GROUP_COLORS = ['#006b63', '#386281', '#7d5260', '#65558f', '#4b6360'];
 
+/**
+ * Integration repair (content lane, found during built-site verification):
+ * tabButton/groupHeader/tabstrip renderers call wireContextMenu(node, itemsFactory)
+ * but the helper was never defined, so every render threw
+ * `ReferenceError: wireContextMenu is not defined` and tab switching was dead.
+ * This restores the intended wiring using the same openMenu shape the strip
+ * background context menu already uses.
+ */
+function wireContextMenu(node, itemsFactory, _opts = {}) {
+  node.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    openMenu({ point: { x: e.clientX, y: e.clientY }, items: itemsFactory(), minWidth: 230 });
+  });
+}
+
 const isIndexPage = () => !!document.getElementById('pane-home');
 const currentPage = () => (isIndexPage() ? 'index.html' : 'settings.html');
 

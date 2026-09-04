@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Claude Code Router — canonical head-metadata partial</title>
+  <!--build:base-->
+  <!--
+    Canonical head partial: Open Graph / Twitter card / theme-color metadata.
+
+    This file is the single source of truth for the social-card metadata. The
+    static build (scripts/build-site.mjs) copies files verbatim and cannot
+    inline partials yet, so index.html carries the SAME block between its own
+    `ccr-content-head:start` / `ccr-content-head:end` markers. Keep the two
+    blocks byte-identical; a pages-pipeline lane can switch to real inlining
+    later. (The file is a complete document rather than a bare fragment only
+    so the verbatim copier emits something that survives site verification.)
+
+    og:image points at the canonical published path for
+    site/assets/social-preview.png. That PNG does not exist in the repository
+    yet — there is a documented TODO beside the tag in index.html. Never
+    repoint it at a guessed or third-party URL; publish the real 1280x640
+    asset instead so pasted links show the actual product.
+  -->
+  <!-- ccr-content-head:start -->
+  <meta property="og:title" content="Claude Code Router">
+  <meta property="og:description" content="Route Claude Code to any LLM — transform rules, routing profiles and provider management, documented and downloadable here.">
+  <meta property="og:url" content="https://ding-ding-projects.github.io/claude-code-router/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Claude Code Router">
+  <meta property="og:image" content="https://ding-ding-projects.github.io/claude-code-router/assets/social-preview.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="640">
+  <meta property="og:image:alt" content="Claude Code Router — route Claude Code requests to any LLM. Project wordmark on the teal Material Design 3 seed colour.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Claude Code Router">
+  <meta name="twitter:description" content="Route Claude Code to any LLM — documentation, changelog and verified downloads.">
+  <meta name="twitter:image" content="https://ding-ding-projects.github.io/claude-code-router/assets/social-preview.png">
+  <meta name="theme-color" content="#f5fafa" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#101414" media="(prefers-color-scheme: dark)">
+  <!-- ccr-content-head:end -->
+</head>
+<body></body>
+</html>
