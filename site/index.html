@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" data-md-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Code Router</title>
+  <meta name="description" content="Claude Code Router — route Claude Code to any LLM. Documentation, downloads and release notes for the static site.">
+  <!--build:base-->
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/m3.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <script type="module" src="assets/js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link sr-only" href="#main-content">Skip to content</a>
+
+  <!--
+    Wave-2 mount points on THIS page (documented contract — do not rename):
+      #docs-article-slot   documentation browser article pane
+      #changelog-slot      in-site changelog viewer
+      #download-slot       installer download surface
+  -->
+  <div id="app" class="app-shell" data-dock="left">
+    <header class="topbar" role="banner">
+      <a class="brand" href="./" data-i18n-aria-label="brand.aria">
+        <span class="glyph" aria-hidden="true">🛤️</span><span data-i18n="brand.name">Claude Code Router</span>
+      </a>
+      <div class="spacer"></div>
+      <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle theme">
+        <span class="glyph" aria-hidden="true">◐</span>
+      </button>
+      <select id="lang-select" class="select" style="width:auto" aria-label="Language"></select>
+      <button id="notify-bell" class="icon-btn" type="button" aria-haspopup="dialog">
+        <span class="glyph" aria-hidden="true">🔔</span>
+        <span class="sr-only" data-i18n="notify.centre.open">Notification centre</span>
+      </button>
+      <button id="palette-btn" class="btn btn--text" type="button" aria-keyshortcuts="Control+Shift+F">
+        <span class="glyph" aria-hidden="true">⌘</span>
+        <span data-i18n="palette.open">Commands</span>
+        <kbd>Ctrl+Shift+F</kbd>
+      </button>
+    </header>
+
+    <nav id="tabstrip-region" class="tabstrip-region" aria-label="Site tabs"></nav>
+
+    <main id="main-content" class="content" role="main">
+      <!-- HOME PANE -->
+      <section class="pane" id="pane-home" role="tabpanel" aria-labelledby="tab-home" tabindex="-1">
+        <div class="hero">
+          <h1 data-i18n="home.title">Route Claude Code to any LLM</h1>
+          <p class="lede" data-i18n="home.lede">Claude Code Router is a free tool that lets you direct Claude Code requests to different models and providers, with transform rules, routing profiles and provider management.</p>
+          <p class="lede"><a class="btn btn--filled" href="#download" data-nav-tab="download"><span data-i18n="home.cta.download">Get the app</span></a></p>
+        </div>
+        <div class="card-grid">
+          <article class="card">
+            <h2 class="title-large" data-i18n="home.card.docs.title">Documentation</h2>
+            <p class="body-medium" data-i18n="home.card.docs.body">Feature articles covering behaviour, configuration and failure modes.</p>
+            <p><button class="btn btn--tonal" type="button" data-nav-tab="docs"><span data-i18n="nav.docs">Docs</span></button></p>
+          </article>
+          <article class="card">
+            <h2 class="title-large" data-i18n="home.card.changelog.title">Changelog</h2>
+            <p class="body-medium" data-i18n="home.card.changelog.body">Every released version, searchable, with links to the exact commits.</p>
+            <p><button class="btn btn--tonal" type="button" data-nav-tab="changelog"><span data-i18n="nav.changelog">Changelog</span></button></p>
+          </article>
+          <article class="card">
+            <h2 class="title-large" data-i18n="home.card.settings.title">This site's settings</h2>
+            <p class="body-medium" data-i18n="home.card.settings.body">Theme, language, typography, colours, notifications — all customizable, all local.</p>
+            <p><a class="btn btn--tonal" href="settings.html"><span data-i18n="nav.settings">Settings</span></a></p>
+          </article>
+        </div>
+      </section>
+
+      <!-- DOCS PANE (wave-2 mounts here) -->
+      <section class="pane" id="pane-docs" role="tabpanel" aria-labelledby="tab-docs" tabindex="-1" hidden>
+        <h2 class="headline-medium" data-i18n="docs.title">Documentation</h2>
+        <div id="docs-article-slot" class="slot">
+          <h3 data-i18n="slot.pending.title">Wave-2 content mounts here</h3>
+          <p data-i18n-html="slot.pending.body">The offline documentation browser will render its article list inside this container (<code>#docs-article-slot</code>). The slot, its scroll container and its search wiring are ready now.</p>
+        </div>
+      </section>
+
+      <!-- CHANGELOG PANE (wave-2 mounts here) -->
+      <section class="pane" id="pane-changelog" role="tabpanel" aria-labelledby="tab-changelog" tabindex="-1" hidden>
+        <h2 class="headline-medium" data-i18n="changelog.title">Changelog</h2>
+        <div id="changelog-slot" class="slot">
+          <h3 data-i18n="slot.pending.title">Wave-2 content mounts here</h3>
+          <p data-i18n-html="slot.pending.body">The changelog viewer will mount inside this container (<code>#changelog-slot</code>) with its date filter, regex search and commit links.</p>
+        </div>
+      </section>
+
+      <!-- DOWNLOAD PANE (wave-2 mounts here) -->
+      <section class="pane" id="pane-download" role="tabpanel" aria-labelledby="tab-download" tabindex="-1" hidden>
+        <h2 class="headline-medium" data-i18n="download.title">Download</h2>
+        <div id="download-slot" class="slot">
+          <h3 data-i18n="slot.pending.title">Wave-2 content mounts here</h3>
+          <p data-i18n-html="slot.pending.body">Verified installer buttons from the release manifest will appear inside this container (<code>#download-slot</code>).</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <noscript>
+    <div style="padding:16px;border:2px solid var(--md-sys-color-error)">
+      This site needs JavaScript for navigation, search and settings. The content
+      sections above are still readable without it.
+    </div>
+  </noscript>
+
+  <div id="snackbar-region" class="snackbar-region" role="region" aria-live="polite" aria-label="Notifications"></div>
+  <div id="overlay-root"></div>
+</body>
+</html>
