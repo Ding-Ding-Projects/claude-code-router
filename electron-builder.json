@@ -58,6 +58,10 @@
       {
         "target": "squirrel",
         "arch": ["x64"]
+      },
+      {
+        "target": "squirrel",
+        "arch": ["x64"]
       }
     ],
     "artifactName": "Claude-Code-Router_${version}.${ext}"
