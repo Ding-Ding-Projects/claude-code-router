@@ -9,6 +9,8 @@ import type {
   AppCaptureElementPngRequest,
   AppCaptureElementPngResult,
   AppDataExportResult,
+  ClaudeDesignMigrationExportResult,
+  ClaudeDesignMigrationStatus,
   AppInfo,
   AppImageExportTargetRequest,
   AppImageExportTargetResult,
@@ -98,6 +100,8 @@ declare global {
       closeTray: () => Promise<void>;
       detectProviderIcon: (request: ProviderIconDetectionRequest) => Promise<ProviderIconDetectionResult>;
       exportData: () => Promise<AppDataExportResult>;
+      exportClaudeDesignMigration: () => Promise<ClaudeDesignMigrationExportResult>;
+      getClaudeDesignMigrationStatus: () => Promise<ClaudeDesignMigrationStatus>;
       fetchProviderManifest: (request: ProviderManifestFetchRequest) => Promise<ProviderManifestFetchResult>;
       getAgentAnalysis: (filter?: AgentAnalysisFilter) => Promise<AgentAnalysisSnapshot>;
       getAgentTracePayload: (request: AgentAnalysisTracePayloadRequest) => Promise<AgentAnalysisTracePayloadFullResult>;

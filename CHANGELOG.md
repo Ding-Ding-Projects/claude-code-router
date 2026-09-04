@@ -7,6 +7,8 @@ added under **Unreleased** and move into a version heading when that version shi
 
 ### Added
 
+- **Claude Design migration bridge.** Added an explicit native export for the versioned `claude-design-desktop-import-v1` ZIP archive. The archive includes selected projects, templates, design systems, files, conversations, comments, and thumbnails with provenance, counts, SHA-256 values, and an idempotency key, while excluding request logs, hosted caches, browser state, gateway credentials, OAuth data, mock identity, entitlements, and telemetry. The Extensions view exposes the export only for legacy Claude Design data and never disables or deletes the existing plugin automatically.
+
 - **Material Design 3 management UI.** Token system under `packages/ui/src/styles/m3`
   with light and dark color roles exposed as `--md-sys-*` custom properties plus type
   scale, shape, elevation, and motion tokens; a `ThemeProvider` applying the theme via a
@@ -27,7 +29,8 @@ added under **Unreleased** and move into a version heading when that version shi
 
 - New feature articles: [`docs/features/material-design-3-ui.md`](docs/features/material-design-3-ui.md),
   [`docs/features/reasoning-effort-ultracode.md`](docs/features/reasoning-effort-ultracode.md),
-  and [`docs/features/organization-banner.md`](docs/features/organization-banner.md).
+  [`docs/features/organization-banner.md`](docs/features/organization-banner.md),
+  and [`docs/features/claude-design-migration.md`](docs/features/claude-design-migration.md).
 
 > Note: the three features above are landing via branches currently in review. They are
 > listed here as added work; behavior is documented as the target state until

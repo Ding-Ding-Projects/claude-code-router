@@ -4,6 +4,8 @@ export const IPC_CHANNELS = {
   appCloseTray: "ccr:app:close-tray",
   appDetectProviderIcon: "ccr:app:detect-provider-icon",
   appExportData: "ccr:app:export-data",
+  appExportClaudeDesignMigration: "ccr:app:export-claude-design-migration",
+  appGetClaudeDesignMigrationStatus: "ccr:app:get-claude-design-migration-status",
   appGetConfig: "ccr:app:get-config",
   appGetAgentAnalysis: "ccr:app:get-agent-analysis",
   appGetAgentTracePayload: "ccr:app:get-agent-trace-payload",

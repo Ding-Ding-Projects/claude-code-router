@@ -69,6 +69,10 @@ Use CCR to:
 - **Add capabilities to existing models** with Fusion vision, web search, MCP tools, and ToolHub.
 - **See what actually happened** through request logs, resolved routes, latency, token usage, cost estimates, and account status.
 
+### Claude Design migration bridge
+
+Users with existing Claude Design plugin data can choose **Export migration archive** from the Extensions view. The native export creates a versioned `claude-design-desktop-import-v1` ZIP with selected projects, files, conversations, comments, design systems, templates, and thumbnails, plus source provenance, counts, and SHA-256 digests. Request logs, browser state, gateway credentials, OAuth data, cached hosted assets, proxy responses, mock identity, entitlements, and telemetry are excluded. Export is explicit and leaves the existing plugin and its data unchanged.
+
 CCR supports OpenAI Chat / Responses, Anthropic Messages, Gemini Generate Content / Interactions, OpenRouter, DeepSeek, SiliconFlow, Moonshot, Kimi Code, Mistral, Z.AI, Bailian, and custom compatible providers.
 
 <details open>

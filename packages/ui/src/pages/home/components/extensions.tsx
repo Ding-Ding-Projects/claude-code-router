@@ -14,6 +14,8 @@ export function ExtensionsView({
   configureExtension,
   config,
   installExtension,
+  exportClaudeDesignMigration,
+  legacyMigrationAvailable,
   openExtensionApp,
   removeExtension,
   setExtensionEnabled
@@ -21,6 +23,8 @@ export function ExtensionsView({
   configureExtension: (source: ExtensionSource, index: number) => void;
   config: AppConfig;
   installExtension: () => void;
+  exportClaudeDesignMigration: () => void;
+  legacyMigrationAvailable: boolean;
   openExtensionApp: (index: number, appId?: string) => void;
   removeExtension: (source: ExtensionSource, index: number, groupIndexes: number[]) => void;
   setExtensionEnabled: (source: ExtensionSource, index: number, enabled: boolean, groupIndexes: number[]) => void;
@@ -83,6 +87,7 @@ export function ExtensionsView({
                   <AnimatePresence initial={false}>
                   {visibleExtensions.map((extension) => {
                     const appId = extension.source === "plugins" ? openablePluginAppId(config, extension.index) : undefined;
+                    const isClaudeDesignLegacy = extension.source === "plugins" && config.plugins[extension.index]?.id === "claude-design";
                     return (
                     <AnimatedListItem
                       className="grid min-h-[58px] grid-cols-[minmax(180px,0.95fr)_minmax(220px,1.15fr)_minmax(240px,1.2fr)_116px_116px] items-center gap-3 px-4 py-2.5 transition-colors duration-[var(--md-sys-motion-duration-short3)] hover:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_4%,transparent)]"
@@ -130,6 +135,17 @@ export function ExtensionsView({
                           <Trash2 className="h-3.5 w-3.5" />
                         </MdButton>
                       </div>
+                      {isClaudeDesignLegacy && legacyMigrationAvailable ? (
+                        <div className="col-span-full flex flex-wrap items-center justify-between gap-2 rounded-[var(--md-sys-shape-corner-small)] border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] px-3 py-2">
+                          <div className="min-w-0">
+                            <div className="md-type-label-large">{t("Claude Design Desktop migration")}</div>
+                            <div className="md-type-body-small text-[var(--md-sys-color-on-surface-variant)]">{t("Export selected legacy projects into a versioned ZIP. Nothing is disabled or deleted automatically.")}</div>
+                          </div>
+                          <MdButton onClick={exportClaudeDesignMigration} size="sm" type="button" variant="tonal">
+                            {t("Export migration archive")}
+                          </MdButton>
+                        </div>
+                      ) : null}
                     </AnimatedListItem>
                     );
                   })}
