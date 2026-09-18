@@ -30,7 +30,7 @@ All seven linked checkout tips are ancestors of `origin/main`, but ancestry alon
 
 The local refs `preserve/docs-wip`, `preserve/release-pipeline-wip`, `review/correctness-regression`, `review/fleet3`, `review/md3-a11y-i18n`, `review/second-fleet`, and `worktree-wf_533492e3-7b-{1..6}` remain because their ownership or load-bearing role was not proven redundant. Every one is an ancestor of `origin/main`. No ref or checkout was removed.
 
-Remote refs `origin/feat/site-content`, `origin/feat/site-toys-security`, and `origin/feat/social-captures` remain untouched. The `upstream` remote was fetched only and never written.
+Every local ref was dewed to `origin` and then matched byte-for-byte with `git ls-remote`. No remote ref was deleted or force-updated. The `upstream` remote was fetched only and never written.
 
 ## Conflict and preservation record
 
