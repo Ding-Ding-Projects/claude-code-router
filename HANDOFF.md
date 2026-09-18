@@ -1,93 +1,64 @@
 # Handoff
 
-Current state of this repository for whoever picks it up next. Written 2026-08-22,
-superseding the earlier per-lane handoff (that one described mid-flight state; every
-claim in it was re-checked against the repository before this rewrite).
+Repository state verified on 2026-09-18 after fetching both configured remotes.
 
-## Where things stand
+## Integrated state
 
-### Claude Design migration bridge
+- Default branch: `main` at `de0126b3850a407e092c6f230dc7f842efe48460`.
+- `origin/main` points to the same commit. The default branch was already integrated and had no local changes before this handoff refresh.
+- `upstream/main` was fetched at `a034b0c5`; no changes were copied from upstream because this closeout did not authorize unrelated product work.
+- No merge was required during this closeout. Every inspected checkout had a clean index, no unmerged entries, and no conflict markers.
+- No stashes were present.
 
-- `codex/claude-design-handoff` adds `packages/electron/src/main/claude-design-migration.ts`, a read-only exporter for `claude-design-desktop-import-v1`.
-- The exporter includes selected project records, templates, design systems, files, conversations, comments, and thumbnails. It writes a manifest with source version and commit, source database SHA-256, counts, per-file hashes, export time, and a deterministic idempotency key.
-- Exclusions are explicit and enforced: request logs, headers, bodies, responses, hosted caches, proxy responses, browser state, gateway configuration and keys, OAuth data, mock identity, entitlements, telemetry, and analytics are not exported.
-- `packages/electron/src/main/ipc.ts` adds a native save-dialog action, and the Extensions view shows a non-blocking export card for the legacy Claude Design plugin. The action never disables, removes, or uninstalls the plugin.
-- The exporter uses unique temporary files, bounded rename retry for transient Windows sharing errors, relative archive paths, traversal rejection, per-file and total size limits, and duplicate-entry checks.
-- The new focused tests pass when run under Node after rebuilding `better-sqlite3` for the Node ABI. The Electron test harness currently needs its native binding rebuilt for Electron 42.3.3 before the full Electron suite can execute.
+## Checkout inventory and retention decisions
 
-- Default branch: `main` @ `6020e9b`, pushed and verified on
-  `Ding-Ding-Projects/claude-code-router` (public). Upstream remains configured as
-  the `upstream` remote and was never written to.
-- The release train merged: Material Design 3 UI rewrite, `ultracode`
-  reasoning-effort tier end-to-end, organization banner, desktop shell chrome,
-  default claude-design + claude-ship plugins, universal upstream auto-retry
-  (15 s cooldown, unlimited attempts, SSE waiting stream), Squirrel release
-  pipeline, line counter with agent-vs-human attribution, docs set.
-- A GitHub Pages site (landing + docs + changelog + visitor settings) is being
-  built on six local branches by a parallel build fleet; see "In flight".
+The primary checkout is `C:\\Users\\cntow\\Documents\\GitHub\\claude-code-router`.
 
-## Verification evidence (what actually ran)
+The following linked checkouts remain because they are active fleet lanes or ownership is not independently proven safe for removal:
 
-| Gate | Command | Result |
-| --- | --- | --- |
-| Type check | `npm run typecheck` | exit 0 |
-| UI suite | `npm test -w @claude-code-router/ui` | 187 pass / 0 fail |
-| Bundle build | `npm run build:assets` | exit 0 |
-| Core focused | compiled `default-plugins`, `upstream-waiting-retry`, `claude-app-gateway-models` under `.test-dist/` via `node --test` | 45 pass / 0 fail |
-| Line counter | `node scripts/count-lines.mjs` | exit 0 |
+| Branch | Commit | Checkout | Decision |
+| --- | --- | --- | --- |
+| `feat/site-core` | `2e453b53d22a936b470c6f8224fab8a33f7e4ddf` | `.claude/worktrees/wf_533492e3-7b0-1` | Retained as an active site lane |
+| `feat/social-captures` | `f863a7d91f78b8b650ca8935de94d2d655e7a8b3` | `.claude/worktrees/wf_533492e3-7b0-2` | Retained as an active site lane |
+| `feat/pages-pipeline` | `c1aed679b65349e78ea48e459b197e17a7e010d4` | `.claude/worktrees/wf_533492e3-7b0-3` | Retained as an active site lane |
+| `feat/site-content` | `71b546805c596dc23b32a2a2e34e81f7f44c2ffc` | `.claude/worktrees/wf_533492e3-7b0-4` | Retained as an active site lane |
+| `feat/site-toys-security` | `e3c865ea6af2ee678763aec42b10a9a532b68ef5` | `.claude/worktrees/wf_533492e3-7b-5` | Retained because the checkout is locked by an active process |
+| `feat/site-toys-ops` | `1a0e30475f932640293bf89f8e4c69c2e47357d6` | `.claude/worktrees/wf_533492e3-7b-6` | Retained as an active site lane |
+| `codex/claude-design-handoff` | `83ce4db3b40871570b1dd60478e011a1a93782b1` | external linked checkout | Retained because ownership is not proven redundant |
 
-All gates ran against the integrated tree at `6020e9b`, i.e. against the source
-tree plus its built bundle — none of them drove the packaged installer. The
-desktop-shell lane additionally ran its own electron unit suite (41/41) and the
-effort-UI lane proved one negative regression red→green before landing.
+All seven linked checkout tips are ancestors of `origin/main`, but ancestry alone does not prove that a live or ownership-uncertain checkout may be removed.
 
-## Known open items (each needs an owner)
+The local refs `preserve/docs-wip`, `preserve/release-pipeline-wip`, `review/correctness-regression`, `review/fleet3`, `review/md3-a11y-i18n`, `review/second-fleet`, and `worktree-wf_533492e3-7b-{1..6}` remain because their ownership or load-bearing role was not proven redundant. Every one is an ancestor of `origin/main`. No ref or checkout was removed.
 
-1. **CI billing blocker** — the first workflow run on this repo failed at startup:
-   GitHub-hosted runners were refused because of account payments / spending limit.
-   This is account-level; every push stays red until billing is resolved. The
-   workflow files themselves parse clean and gate on nothing by design.
-2. **No release exists yet** — releases publish automatically per push once the
-   billing blocker clears. Until then README's "landing in this release train"
-   banner stays up, the download button on the future site stays absent, and
-   roadmap items stay unticked.
-3. **Visual captures pending** — real built-app screenshots (light/dark home,
-   settings, tray) and the root `social-preview.png` are being produced by the
-   site fleet's capture lane. Nothing visual should be claimed until those land.
-4. **UI language coverage** — the management UI i18n is `en` + `zh` only today;
-   there is no zh-Hant or bilingual mode in the app itself (the ultracode label
-   ships as en + zh accordingly). Closing that gap is a cross-cutting change.
-5. **~65 bespoke-styled buttons** intentionally left un-swapped during the home
-   reskin (unlayered `.md-btn` rules would silently override their utility
-   classes); they render through bridged tokens instead. Swap them only together
-   with a specificity fix.
-6. **Tidbyt/status surfaces** live outside this repository and are unaffected by
-   anything here.
+Remote refs `origin/feat/site-content`, `origin/feat/site-toys-security`, and `origin/feat/social-captures` remain untouched. The `upstream` remote was fetched only and never written.
 
-## In flight (do not delete while active)
+## Conflict and preservation record
 
-Six local branches owned by the site-build fleet, each with an active checkout:
-`feat/site-core`, `feat/social-captures`, `feat/pages-pipeline`,
-`feat/site-content`, `feat/site-toys-security`, `feat/site-toys-ops`. When they
-land: merge to `main`, run the full gate battery again, enable Pages with
-`build_type=workflow` (see `scripts/PAGES-ENABLE.md`), verify the deployed site
-serves absolute OG tags under `/claude-code-router/`.
+- Inventory found no recoverable uncommitted files in the primary checkout or linked checkouts, so no preservation commit was necessary.
+- No half-finished file changes were present to commit.
+- No index conflict entries were present before or after the closeout.
+- No conflict markers were found in tracked checkout content.
+- No conflict-resolution choice was required.
 
-Retained deliberately after ancestry checks (not ancestors of `main`, content
-superseded): `preserve/docs-wip`, `preserve/release-pipeline-wip`,
-`review/correctness-regression`, `review/fleet3`, `review/md3-a11y-i18n`,
-`review/second-fleet`. Delete only with fresh authorization after re-proving.
+## Archive evidence
 
-## Next steps for whoever picks this up
+The required external archive was created and verified before any removal decision:
 
-1. Clear the Actions billing blocker, then watch the first release run end to end
-   and confirm the Squirrel artifacts + dim-sum code name land in the notes.
-2. Land the site fleet, enable Pages, verify deployed URL + OG fetch anonymously.
-3. Run each feature article's planned verification against a real installed build
-   (theme persistence across restart, catalog-gated ultracode visibility, banner
-   round-trip + validation rejections), then tick the three roadmap items and move
-   changelog entries into a version heading — not before.
-4. Promote `docs/features/*.md` into the Astro collection under
-   `docs/src/content/docs/en/...` so the articles render on the existing docs
-   site, then mirror into the zh-Hant set.
-5. Close the en/zh-only i18n gap (add zh-Hant + bilingual mode app-wide).
+`C:\\Users\\cntow\\OneDrive\\OakKayBackups\\claude-code-router\\zips\\claude-code-router-20260918T164500Z.7z`
+
+- Format: 7z
+- Size: 76,018,359 bytes
+- Contents: 986 files and 59 folders, including `.git\\HEAD` and `README.md`
+- Source set: `.git` plus exactly `git ls-files` and `git ls-files --others --exclude-standard`
+- Tracked paths: 859
+- Nonignored untracked paths: 0
+- Ignored paths excluded: 41,120
+- Verification: `7z t` exited 0 and reported `Everything is Ok`
+
+An earlier archive at `C:\\Users\\cntow\\OneDrive\\OakKayBackups\\claude-code-router\\zips\\claude-code-router-20260918T164209Z.7z` produced two UTF-8 path warnings and is not treated as the verified backstop. It was retained rather than overwritten.
+
+## Verification and remaining work
+
+This closeout did not run unrelated release work, installer work, or a new product test suite. Existing release and site follow-up items remain open until their owners provide built-artifact and hosted evidence.
+
+The next owner should first confirm that the six site lanes and the design-handoff checkout are no longer active. Only after that confirmation, a fresh ancestry proof, and a fresh archive should any of them be considered for removal.
